@@ -14,7 +14,7 @@ async function createWindow() {
     minWidth: 900,
     minHeight: 600,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.cjs'),
+      preload: join(__dirname, '../../preload/dist/index.cjs'),
       nodeIntegration: false,
       contextIsolation: true
     },
@@ -31,7 +31,7 @@ async function createWindow() {
     await mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools()
   } else {
-    await mainWindow.loadFile(join(__dirname, '../renderer/dist/index.html'))
+    await mainWindow.loadFile(join(__dirname, '../../renderer/dist/index.html'))
   }
 }
 

@@ -48,11 +48,21 @@ export const useModuleStore = defineStore('module', () => {
     }
   }
 
+  async function getModuleStyle(moduleName: string) {
+    try {
+      return await window.electronAPI.getModuleStyle(moduleName)
+    } catch (e) {
+      console.error('Failed to get module style:', e)
+      return { style: null, has_style: false }
+    }
+  }
+
   return {
     modules,
     loading,
     loadModules,
     getModuleConfig,
-    saveModuleConfig
+    saveModuleConfig,
+    getModuleStyle
   }
 })
