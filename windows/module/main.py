@@ -202,6 +202,31 @@ async def get_logs(limit: int = 100):
     return {"logs": get_logs(limit)}
 
 
+@app.post("/api/config/test-email")
+async def test_email():
+    """发送测试邮件到发件邮箱"""
+    from module.notifier.sender import Notifier
+    from datetime import datetime
+
+    config = Notifier.get_global_config()
+    smtp_user = config.get("smtp_user", "")
+
+    if not smtp_user:
+        raise HTTPException(status_code=400, detail="发件邮箱未配置")
+
+    success = Notifier.send(
+        notify_type="email",
+        target=smtp_user,
+        title="Auto Controller 测试邮件",
+        content=f"这是一封测试邮件\n\n发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n如果您收到此邮件，说明邮箱配置正确。"
+    )
+
+    if success:
+        return {"success": True, "message": f"测试邮件已发送至 {smtp_user}"}
+    else:
+        raise HTTPException(status_code=500, detail="邮件发送失败，请检查SMTP配置")
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     print(f"[API] Starting on port {port}")
