@@ -295,7 +295,7 @@ const route = useRoute()
 const router = useRouter()
 const moduleStore = useModuleStore()
 
-const moduleName = computed(() => route.params.moduleName as string)
+const moduleName = computed(() => String(route.params.moduleName || ''))
 const moduleDisplayName = computed(() => {
   const mod = moduleStore.modules.find(m => m.name === moduleName.value)
   return mod?.display_name || moduleName.value
@@ -587,9 +587,9 @@ function injectModuleStyle(css: string) {
 }
 
 // 监听路由参数变化，重新加载配置
-watch(moduleName, () => {
+watch(() => route.params.moduleName, () => {
   loadConfig()
-})
+}, { immediate: false })
 
 // 计算下次执行时间
 const nextRunTime = computed(() => {

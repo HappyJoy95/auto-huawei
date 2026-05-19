@@ -2,7 +2,7 @@
 cd /d %~dp0
 
 echo ========================================
-echo   Auto Controller Starting...
+echo   Auto Controller Starting (Windows)
 echo ========================================
 echo.
 
@@ -19,31 +19,22 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5173 ^| findstr LISTENING') 
     taskkill /F /PID %%a >nul 2>&1
 )
 
-:: Check Python backend
-echo [1/4] Starting Python backend...
-curl -s http://127.0.0.1:5001/api/health >nul 2>&1
-if %errorlevel%==0 (
-    echo [Python] Backend already running
-) else (
-    start "Python Backend" /min cmd /c "venv\Scripts\python.exe module\main.py"
-    timeout /t 3 /nobreak >nul
-)
-
 :: Check Vite server (only for development mode)
-echo [2/4] Starting Vite dev server...
+echo [1/3] Starting Vite dev server...
 curl -s http://localhost:5173 >nul 2>&1
 if %errorlevel%==0 (
     echo [Vite] Server already running
 ) else (
     start "Vite Dev Server" /min cmd /c "cd packages\renderer && npx vite --host"
-    timeout /t 5 /nobreak >nul
+    timeout /t 3 /nobreak >nul
 )
 
-:: Start Electron using npx (no hardcoded path!)
-echo [4/4] Starting Electron App...
+:: Start Electron using npx (Python backend managed by Electron internally)
+echo [3/3] Starting Electron App...
 echo.
 echo ========================================
 echo   Application starting in desktop window...
+echo   (Python backend will be managed by Electron)
 echo   (Do not close this window)
 echo ========================================
 echo.

@@ -69,7 +69,7 @@ const route = useRoute()
 const router = useRouter()
 const moduleStore = useModuleStore()
 
-const moduleName = computed(() => route.params.moduleName as string)
+const moduleName = computed(() => String(route.params.moduleName || ''))
 const moduleData = computed(() => moduleStore.modules.find((m: any) => m.name === moduleName.value))
 
 const running = ref(false)
