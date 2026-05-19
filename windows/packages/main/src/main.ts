@@ -1,0 +1,156 @@
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { join } from 'path'
+import { PythonManager } from './python'
+
+let mainWindow: BrowserWindow | null = null
+let pythonManager: PythonManager | null = null
+
+const API_BASE = 'http://localhost:5001/api'
+
+async function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true
+    },
+    title: 'Auto Controller',
+    show: false
+  })
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
+  })
+
+  // 开发模式加载 dev server，生产模式加载打包文件
+  if (process.env.NODE_ENV === 'development') {
+    await mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools()
+  } else {
+    await mainWindow.loadFile(join(__dirname, '../renderer/dist/index.html'))
+  }
+}
+
+async function startPython() {
+  pythonManager = new PythonManager()
+  await pythonManager.start()
+}
+
+function setupIpc() {
+  // 任务管理
+  ipcMain.handle('task:list', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/tasks`)
+    return response.data
+  })
+
+  ipcMain.handle('task:run', async (_, taskId: string) => {
+    const axios = require('axios')
+    const response = await axios.post(`${API_BASE}/tasks/${taskId}/run`)
+    return response.data
+  })
+
+  ipcMain.handle('task:stop', async (_, taskId: string) => {
+    const axios = require('axios')
+    const response = await axios.post(`${API_BASE}/tasks/${taskId}/stop`)
+    return response.data
+  })
+
+  ipcMain.handle('task:start', async (_, taskId: string) => {
+    const axios = require('axios')
+    const response = await axios.post(`${API_BASE}/tasks/${taskId}/start`)
+    return response.data
+  })
+
+  // 配置管理
+  ipcMain.handle('config:get', async (_, key?: string) => {
+    const axios = require('axios')
+    const url = key ? `${API_BASE}/config/${key}` : `${API_BASE}/config`
+    const response = await axios.get(url)
+    return response.data
+  })
+
+  ipcMain.handle('config:set', async (_, key: string, value: any) => {
+    const axios = require('axios')
+    const response = await axios.put(`${API_BASE}/config/${key}`, { value })
+    return response.data
+  })
+
+  // 数据获取
+  ipcMain.handle('data:xiaohongshu', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/data/xiaohongshu`)
+    return response.data
+  })
+
+  ipcMain.handle('data:douyin', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/data/douyin`)
+    return response.data
+  })
+
+  ipcMain.handle('data:inspection', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/data/inspection`)
+    return response.data
+  })
+
+  ipcMain.handle('data:orders', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/data/orders`)
+    return response.data
+  })
+
+  // 门店管理
+  ipcMain.handle('stores:list', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/config/stores/list`)
+    return response.data
+  })
+
+  ipcMain.handle('stores:add', async (_, store: any) => {
+    const axios = require('axios')
+    const response = await axios.post(`${API_BASE}/config/stores/add`, store)
+    return response.data
+  })
+
+  ipcMain.handle('stores:update', async (_, index: number, store: any) => {
+    const axios = require('axios')
+    const response = await axios.put(`${API_BASE}/config/stores/${index}`, store)
+    return response.data
+  })
+
+  ipcMain.handle('stores:delete', async (_, index: number) => {
+    const axios = require('axios')
+    const response = await axios.delete(`${API_BASE}/config/stores/${index}`)
+    return response.data
+  })
+}
+
+app.whenReady().then(async () => {
+  try {
+    await startPython()
+    setupIpc()
+    await createWindow()
+  } catch (error) {
+    console.error('启动失败:', error)
+    app.quit()
+  }
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    pythonManager?.stop()
+    app.quit()
+  }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})

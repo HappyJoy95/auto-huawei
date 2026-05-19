@@ -1,0 +1,5 @@
+﻿name: douyin
+display_name: 抖音
+description: 抖音数据采集与发布模块
+icon: play-circle
+enabled: true

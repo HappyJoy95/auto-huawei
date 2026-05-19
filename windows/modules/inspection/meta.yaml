@@ -1,0 +1,5 @@
+﻿name: inspection
+display_name: 巡检
+description: 自动化巡检模块
+icon: check-circle
+enabled: true

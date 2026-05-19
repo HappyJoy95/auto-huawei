@@ -1,0 +1,35 @@
+# 抖音模块配置定义
+fields:
+  - key: accounts
+    label: 账号列表
+    type: object_list
+    default: []
+    fields:
+      - key: name
+        label: 名称
+        type: text
+      - key: url
+        label: 主页链接
+        type: text
+
+  - key: notify_enabled
+    label: 启用推送
+    type: switch
+    default: false
+
+  - key: notify_type
+    label: 推送方式
+    type: select
+    default: "wechat"
+    show_if: "notify_enabled"
+    options:
+      - value: "wechat"
+        label: "企业微信"
+      - value: "email"
+        label: "邮箱"
+
+  - key: notify_target
+    label: 推送目标
+    type: text
+    show_if: "notify_enabled"
+    placeholder: "企业微信填Webhook URL，邮箱填邮箱地址"
