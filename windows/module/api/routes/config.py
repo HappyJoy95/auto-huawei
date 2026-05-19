@@ -9,6 +9,10 @@ from pathlib import Path
 
 router = APIRouter()
 
+
+class EmailTestRequest(BaseModel):
+    to_email: str
+
 CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config"
 
 
@@ -59,3 +63,16 @@ async def set_config(key: str, request: ConfigUpdateRequest):
     from module.config.config import Config
     Config.save_by_key(key, request.value)
     return {"success": True, "key": key}
+
+
+@router.post("/test-email")
+async def test_email(request: EmailTestRequest):
+    """测试邮件发送"""
+    from module.notifier.sender import Notifier
+    success = Notifier.send(
+        "email",
+        request.to_email,
+        "测试邮件",
+        "这是一封来自 AutoController 的测试邮件，配置正确！"
+    )
+    return {"success": success}
