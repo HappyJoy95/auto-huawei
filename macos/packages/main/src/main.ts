@@ -80,53 +80,13 @@ function setupIpc() {
     return response.data
   })
 
-  // 数据获取
-  ipcMain.handle('data:xiaohongshu', async () => {
+  // 数据获取（动态）
+  ipcMain.handle('data:get', async (_, moduleName: string, fileName?: string) => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/xiaohongshu`)
-    return response.data
-  })
-
-  ipcMain.handle('data:douyin', async () => {
-    const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/douyin`)
-    return response.data
-  })
-
-  ipcMain.handle('data:inspection', async () => {
-    const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/inspection`)
-    return response.data
-  })
-
-  ipcMain.handle('data:orders', async () => {
-    const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/orders`)
-    return response.data
-  })
-
-  // 门店管理
-  ipcMain.handle('stores:list', async () => {
-    const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/config/stores/list`)
-    return response.data
-  })
-
-  ipcMain.handle('stores:add', async (_, store: any) => {
-    const axios = require('axios')
-    const response = await axios.post(`${API_BASE}/config/stores/add`, store)
-    return response.data
-  })
-
-  ipcMain.handle('stores:update', async (_, index: number, store: any) => {
-    const axios = require('axios')
-    const response = await axios.put(`${API_BASE}/config/stores/${index}`, store)
-    return response.data
-  })
-
-  ipcMain.handle('stores:delete', async (_, index: number) => {
-    const axios = require('axios')
-    const response = await axios.delete(`${API_BASE}/config/stores/${index}`)
+    const url = fileName
+      ? `${API_BASE}/data/${moduleName}/${fileName}`
+      : `${API_BASE}/data/${moduleName}`
+    const response = await axios.get(url)
     return response.data
   })
 

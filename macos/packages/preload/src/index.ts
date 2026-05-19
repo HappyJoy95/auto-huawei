@@ -20,9 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveModuleConfig: (moduleName: string, config: any) => ipcRenderer.invoke('module:config:save', moduleName, config),
   getModuleStyle: (moduleName: string) => ipcRenderer.invoke('module:style:get', moduleName),
 
-  // 数据 API
-  getXiaohongshuData: () => ipcRenderer.invoke('data:xiaohongshu'),
-  getDouyinData: () => ipcRenderer.invoke('data:douyin'),
-  getInspectionData: () => ipcRenderer.invoke('data:inspection'),
-  getOrdersData: () => ipcRenderer.invoke('data:orders')
+  // 数据 API（动态）
+  getModuleData: (moduleName: string, fileName?: string) => ipcRenderer.invoke('data:get', moduleName, fileName)
 })

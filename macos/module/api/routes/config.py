@@ -1,9 +1,9 @@
 """
 配置管理 API
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 import yaml
 from pathlib import Path
 
@@ -14,13 +14,6 @@ CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config"
 
 class ConfigUpdateRequest(BaseModel):
     value: Any
-
-
-class StoreItem(BaseModel):
-    name: str
-    short_name: Optional[str] = ""
-    code: Optional[str] = ""
-    douyin_url: Optional[str] = ""
 
 
 @router.get("")
@@ -66,46 +59,3 @@ async def set_config(key: str, request: ConfigUpdateRequest):
     from module.config.config import Config
     Config.save_by_key(key, request.value)
     return {"success": True, "key": key}
-
-
-# 门店管理 API
-@router.get("/stores/list")
-async def get_stores():
-    """获取门店列表"""
-    from module.config.config import Config
-    stores = Config.get_stores()
-    return {"stores": stores, "total": len(stores)}
-
-
-@router.post("/stores/add")
-async def add_store(store: StoreItem):
-    """添加门店"""
-    from module.config.config import Config
-    stores = Config.get_stores()
-    stores.append(store.dict())
-    Config.set_stores(stores)
-    return {"success": True, "message": "添加成功"}
-
-
-@router.put("/stores/{index}")
-async def update_store(index: int, store: StoreItem):
-    """更新门店"""
-    from module.config.config import Config
-    stores = Config.get_stores()
-    if index < 0 or index >= len(stores):
-        raise HTTPException(status_code=400, detail="无效的索引")
-    stores[index] = store.dict()
-    Config.set_stores(stores)
-    return {"success": True, "message": "更新成功"}
-
-
-@router.delete("/stores/{index}")
-async def delete_store(index: int):
-    """删除门店"""
-    from module.config.config import Config
-    stores = Config.get_stores()
-    if index < 0 or index >= len(stores):
-        raise HTTPException(status_code=400, detail="无效的索引")
-    stores.pop(index)
-    Config.set_stores(stores)
-    return {"success": True, "message": "删除成功"}
