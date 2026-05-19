@@ -286,7 +286,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import { useModuleStore } from '../stores/module'
 import { Message } from '@arco-design/web-vue'
 import { IconLeft, IconDelete, IconPlus, IconClose } from '@arco-design/web-vue/es/icon'
@@ -587,9 +587,11 @@ function injectModuleStyle(css: string) {
 }
 
 // 监听路由参数变化，重新加载配置
-watch(() => route.params.moduleName, () => {
-  loadConfig()
-}, { immediate: false })
+onBeforeRouteUpdate((to, from) => {
+  if (to.params.moduleName !== from.params.moduleName) {
+    loadConfig()
+  }
+})
 
 // 计算下次执行时间
 const nextRunTime = computed(() => {
