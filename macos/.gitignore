@@ -26,6 +26,9 @@ Thumbs.db
 
 # PID 文件
 *.pid
+.app.pid
+.backend.pid
+.frontend.pid
 
 # 打包文件
 *.tar.gz
