@@ -32,6 +32,7 @@ class ModuleManager:
         config_yaml = module_dir / "config.yaml"   # 调度器配置
         config_json = module_dir / "config.json"   # 模块配置
         settings_file = module_dir / "settings.yaml"  # 设置定义
+        settings_css = module_dir / "settings.css"  # 自定义样式
         task_file = module_dir / "task.py"
 
         # 读取元信息
@@ -65,6 +66,7 @@ class ModuleManager:
                 settings_def = yaml.safe_load(f) or {"fields": []}
 
         has_task = task_file.exists()
+        has_style = settings_css.exists()
 
         self.modules[module_name] = {
             "meta": meta,
@@ -72,6 +74,7 @@ class ModuleManager:
             "module_config": module_config,
             "settings_def": settings_def,
             "has_task": has_task,
+            "has_style": has_style,
             "path": str(module_dir)
         }
 
@@ -261,6 +264,19 @@ class ModuleManager:
 
         self.modules[module_name]["module_config"] = config
         return True
+
+    def get_module_style(self, module_name: str) -> Optional[str]:
+        """获取模块自定义样式"""
+        if module_name not in self.modules:
+            raise ValueError(f"Module {module_name} not found")
+
+        module_dir = MODULES_DIR / module_name
+        style_file = module_dir / "settings.css"
+
+        if style_file.exists():
+            with open(style_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return None
 
 
 # 全局模块管理器实例

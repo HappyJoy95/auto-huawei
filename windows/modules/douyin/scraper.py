@@ -49,8 +49,8 @@ class DouyinWebScraper:
 
         # 设置 cookies 保存路径
         project_root = Path(__file__).parent.parent
-        self.cookies_file = cookies_file or str(project_root / "data" / "douyin_cookies.json")
-        self.user_data_dir = user_data_dir or str(project_root / "data" / "browser_data")
+        self.cookies_file = cookies_file or str(project_root / "data" / "douyin" / "cookies.json")
+        self.user_data_dir = user_data_dir or str(project_root / "data" / "douyin" / "browser_data")
 
         # 确保目录存在
         Path(self.cookies_file).parent.mkdir(parents=True, exist_ok=True)

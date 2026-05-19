@@ -80,53 +80,41 @@ function setupIpc() {
     return response.data
   })
 
-  // 数据获取
-  ipcMain.handle('data:xiaohongshu', async () => {
+  // 数据获取（动态）
+  ipcMain.handle('data:get', async (_, moduleName: string, fileName?: string) => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/xiaohongshu`)
+    const url = fileName
+      ? `${API_BASE}/data/${moduleName}/${fileName}`
+      : `${API_BASE}/data/${moduleName}`
+    const response = await axios.get(url)
     return response.data
   })
 
-  ipcMain.handle('data:douyin', async () => {
+  // 模块管理
+  ipcMain.handle('module:list', async () => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/douyin`)
+    const response = await axios.get(`${API_BASE}/modules`)
     return response.data
   })
 
-  ipcMain.handle('data:inspection', async () => {
+  ipcMain.handle('module:config:get', async (_, moduleName: string) => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/inspection`)
+    const response = await axios.get(`${API_BASE}/modules/${moduleName}/configs`)
     return response.data
   })
 
-  ipcMain.handle('data:orders', async () => {
+  ipcMain.handle('module:config:save', async (_, moduleName: string, config: any) => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/data/orders`)
-    return response.data
+    // 保存调度器配置
+    await axios.put(`${API_BASE}/modules/${moduleName}/scheduler-config`, config.scheduler)
+    // 保存模块配置
+    await axios.put(`${API_BASE}/modules/${moduleName}/module-config`, config.module)
+    return { success: true }
   })
 
-  // 门店管理
-  ipcMain.handle('stores:list', async () => {
+  ipcMain.handle('module:style:get', async (_, moduleName: string) => {
     const axios = require('axios')
-    const response = await axios.get(`${API_BASE}/config/stores/list`)
-    return response.data
-  })
-
-  ipcMain.handle('stores:add', async (_, store: any) => {
-    const axios = require('axios')
-    const response = await axios.post(`${API_BASE}/config/stores/add`, store)
-    return response.data
-  })
-
-  ipcMain.handle('stores:update', async (_, index: number, store: any) => {
-    const axios = require('axios')
-    const response = await axios.put(`${API_BASE}/config/stores/${index}`, store)
-    return response.data
-  })
-
-  ipcMain.handle('stores:delete', async (_, index: number) => {
-    const axios = require('axios')
-    const response = await axios.delete(`${API_BASE}/config/stores/${index}`)
+    const response = await axios.get(`${API_BASE}/modules/${moduleName}/style`)
     return response.data
   })
 }

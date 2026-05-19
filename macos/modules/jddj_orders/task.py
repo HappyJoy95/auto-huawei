@@ -2,8 +2,7 @@
 京东到家订单监控任务
 """
 from module.tasks.base import BaseTask, TaskResult, TaskStatus
-from module.config.config import Config, DATA_DIR
-from module.notifier import Notifier
+from module.config.config import DATA_DIR
 from pathlib import Path
 from datetime import datetime
 import json
@@ -11,7 +10,7 @@ import re
 from playwright.sync_api import sync_playwright
 
 # 数据目录
-JDDJ_DATA_DIR = DATA_DIR / "jddj"
+JDDJ_DATA_DIR = DATA_DIR / "jddj_orders"
 
 
 class JddjOrdersTask(BaseTask):
@@ -79,19 +78,34 @@ class JddjOrdersTask(BaseTask):
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
 
-            # 发送通知
-            if pending_orders:
-                self._send_notification(pending_orders)
-
             self.status = TaskStatus.COMPLETED
             self.update_progress(100, f"获取完成，{len(pending_orders)} 条待处理订单")
+
+            # 构建通知内容
+            notify_content = ""
+            if pending_orders:
+                notify_lines = [
+                    f"**待接单：** {result['待接单数量']} 单",
+                    f"**待打印：** {result['待打印数量']} 单",
+                    ""
+                ]
+                for i, order in enumerate(pending_orders[:5], 1):
+                    notify_lines.append(f"**{i}. {order['状态']}**")
+                    notify_lines.append(f"> 订单号：`{order['订单号']}`")
+                    if order['门店']:
+                        notify_lines.append(f"> 门店：{order['门店']}")
+                if len(pending_orders) > 5:
+                    notify_lines.append(f"\n_... 还有 {len(pending_orders) - 5} 条订单_")
+                notify_content = "\n".join(notify_lines)
 
             return TaskResult(
                 success=True,
                 message=f"获取 {len(pending_orders)} 条待处理订单",
                 data=result,
                 start_time=start_time,
-                end_time=datetime.now()
+                end_time=datetime.now(),
+                notify_title="🛒 京东到家订单通知" if pending_orders else None,
+                notify_content=notify_content if pending_orders else None
             )
 
         except Exception as e:
@@ -165,24 +179,3 @@ class JddjOrdersTask(BaseTask):
                 pass
 
         return orders
-
-    def _send_notification(self, orders: list):
-        """发送企业微信通知"""
-        lines = [
-            "## 京东到家新订单通知",
-            f"**时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            f"**待接单：** {len([o for o in orders if '待接单' in o['状态']])} 单",
-            f"**待打印：** {len([o for o in orders if '待打印' in o['状态']])} 单",
-            "",
-            "---",
-            "**订单详情：**"
-        ]
-
-        for i, order in enumerate(orders, 1):
-            lines.append(f"\n**{i}. {order['状态']}**")
-            lines.append(f"> 订单号：`{order['订单号']}`")
-            if order['门店']:
-                lines.append(f"> 门店：{order['门店']}")
-
-        Notifier.send("wechat", self.config.get("notify_target", ""), "京东到家新订单", "\n".join(lines))

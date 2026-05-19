@@ -91,18 +91,6 @@ async def get_module_configs(module_name: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@app.get("/api/modules/{module_name}/style")
-async def get_module_style(module_name: str):
-    """获取模块的自定义样式"""
-    from pathlib import Path
-    module_dir = Path(__file__).parent.parent / "modules" / module_name
-    style_file = module_dir / "settings.css"
-
-    if style_file.exists():
-        return {"css": style_file.read_text(encoding="utf-8")}
-    return {"css": ""}
-
-
 @app.get("/api/modules/{module_name}/scheduler-config")
 async def get_scheduler_config(module_name: str):
     """获取调度器配置"""
@@ -142,6 +130,16 @@ async def save_module_config(module_name: str, config: dict):
     try:
         module_manager.save_module_config(module_name, config)
         return {"success": True, "message": "模块配置已保存"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/modules/{module_name}/style")
+async def get_module_style(module_name: str):
+    """获取模块自定义样式"""
+    try:
+        style = module_manager.get_module_style(module_name)
+        return {"style": style, "has_style": style is not None}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

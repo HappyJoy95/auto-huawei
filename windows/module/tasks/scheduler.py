@@ -225,17 +225,20 @@ class TaskQueueScheduler:
                 module_name=module_name,
                 module_display_name=module_display_name,
                 module_config=module_config,
-                result={
-                    "success": result.success,
-                    "message": result.message,
-                    "notify_title": result.notify_title,
-                    "notify_content": result.notify_content
-                }
+                result={"success": result.success, "message": result.message}
             )
 
         except Exception as e:
             task.status = TaskStatus.ERROR
             add_log("ERROR", f"执行异常: {str(e)}", module_name)
+
+            # 发送失败通知
+            Notifier.notify_task_result(
+                module_name=module_name,
+                module_display_name=module_display_name,
+                module_config=module_config,
+                result={"success": False, "message": str(e)}
+            )
 
         finally:
             with self._lock:

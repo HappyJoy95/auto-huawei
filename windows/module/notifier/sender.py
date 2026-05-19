@@ -118,7 +118,7 @@ class Notifier:
         :param module_name: 模块名
         :param module_display_name: 显示名
         :param module_config: 模块配置
-        :param result: 执行结果（包含 success, message, notify_title, notify_content）
+        :param result: 执行结果
         """
         # 获取全局配置
         global_config = cls.get_global_config()
@@ -145,20 +145,14 @@ class Notifier:
             else:
                 return
 
-        # 使用模块自定义的通知内容，或生成默认内容
-        title = result.get("notify_title")
-        content = result.get("notify_content")
+        message = result.get("message", "")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if not title or not content:
-            # 模块未提供自定义内容，生成默认内容
-            message = result.get("message", "")
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            if success:
-                title = f"✅ {module_display_name} 执行成功"
-                content = f"模块: {module_display_name}\n时间: {timestamp}\n结果: {message}"
-            else:
-                title = f"❌ {module_display_name} 执行失败"
-                content = f"模块: {module_display_name}\n时间: {timestamp}\n错误: {message}"
+        if success:
+            title = f"✅ {module_display_name} 执行成功"
+            content = f"模块: {module_display_name}\n时间: {timestamp}\n结果: {message}"
+        else:
+            title = f"❌ {module_display_name} 执行失败"
+            content = f"模块: {module_display_name}\n时间: {timestamp}\n错误: {message}"
 
         cls.send(notify_type, notify_target, title, content)

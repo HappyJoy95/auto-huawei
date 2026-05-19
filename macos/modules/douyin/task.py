@@ -23,9 +23,10 @@ class DouyinTask(BaseTask):
         start_time = datetime.now()
 
         try:
-            # 数据文件
-            data_file = DATA_DIR / "douyin_data.json"
-            data_file.parent.mkdir(parents=True, exist_ok=True)
+            # 数据目录
+            douyin_data_dir = DATA_DIR / "douyin"
+            douyin_data_dir.mkdir(parents=True, exist_ok=True)
+            data_file = douyin_data_dir / "posts.json"
 
             self.update_progress(10, "启动浏览器...")
 

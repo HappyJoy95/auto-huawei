@@ -27,9 +27,6 @@ class TaskResult:
     error: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    # 通知内容（可选，模块可自定义推送内容）
-    notify_title: Optional[str] = None
-    notify_content: Optional[str] = None
 
 
 @dataclass
