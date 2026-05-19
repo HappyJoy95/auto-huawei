@@ -1,0 +1,5 @@
+﻿name: jddj_orders
+display_name: 京东到家订单
+description: 京东到家订单数据同步模块
+icon: shopping-cart
+enabled: true

@@ -1,0 +1,10 @@
+{
+  "description": "京东到家订单监控配置",
+  "username": "jd_sdslsmk73",
+  "password": "",
+  "target_status": [
+    "待接单",
+    "待打印"
+  ],
+  "headless": true
+}

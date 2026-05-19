@@ -1,0 +1,10 @@
+enabled: true
+interval: 10
+interval_days:
+- 1
+- 2
+- 3
+- 4
+- 5
+interval_end: '23:59'
+interval_start: 00:00

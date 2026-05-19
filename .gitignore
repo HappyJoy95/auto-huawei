@@ -1,0 +1,38 @@
+# 依赖
+node_modules/
+venv/
+
+# 构建产物
+packages/*/dist/
+release/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 日志
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# PID 文件
+*.pid
+.app.pid
+.backend.pid
+.frontend.pid
+
+# 打包文件
+*.tar.gz
+*.zip
+
+# 数据文件
+data/
