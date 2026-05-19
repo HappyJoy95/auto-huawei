@@ -64,7 +64,8 @@ import {
   IconUser,
   IconVideoCamera,
   IconBook,
-  IconStorage
+  IconStorage,
+  IconPlayCircle
 } from '@arco-design/web-vue/es/icon'
 
 const router = useRouter()
@@ -92,6 +93,8 @@ function getModuleIcon(iconName: string) {
     'xiaohongshu': IconBook,
     'douyin': IconVideoCamera,
     'jddj_orders': IconStorage,
+    'shopping-cart': IconStorage,
+    'play-circle': IconPlayCircle,
     'default': IconUser
   }
   return iconMap[iconName] || iconMap['default']
