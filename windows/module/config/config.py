@@ -104,6 +104,11 @@ class Config:
             cls._save_main_config()
 
     @classmethod
+    def get_adb_port(cls) -> str:
+        """获取 ADB 端口"""
+        return cls.get('emulator.adb_port', "127.0.0.1:16448")
+
+    @classmethod
     def get_browser_config(cls) -> dict:
         """获取浏览器配置"""
         return cls.get('browser', {

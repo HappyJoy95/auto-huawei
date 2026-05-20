@@ -27,6 +27,8 @@ class TaskResult:
     error: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    notify_title: Optional[str] = None
+    notify_content: Optional[str] = None
 
 
 @dataclass
