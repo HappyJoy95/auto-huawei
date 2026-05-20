@@ -71,12 +71,32 @@ class DouyinTask(BaseTask):
             self.status = TaskStatus.COMPLETED
             self.update_progress(100, f"采集完成，共 {len(posts)} 条视频")
 
+            # 生成新增视频 CSV 附件
+            attachment_path = None
+            if posts:
+                import csv
+                csv_file = douyin_data_dir / f"douyin_new_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                csv_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['门店名称', '标题', '点赞数', '视频链接', '采集时间'])
+                    for p in posts:
+                        writer.writerow([
+                            p.store_name,
+                            p.title,
+                            p.likes or 0,
+                            p.post_link or '',
+                            p.crawl_time.strftime('%Y-%m-%d %H:%M:%S')
+                        ])
+                attachment_path = str(csv_file)
+
             return TaskResult(
                 success=True,
                 message=f"采集完成，共 {len(posts)} 条视频",
                 data={"total": len(posts)},
                 start_time=start_time,
-                end_time=datetime.now()
+                end_time=datetime.now(),
+                attachment_path=attachment_path
             )
 
         except Exception as e:

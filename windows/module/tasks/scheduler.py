@@ -203,6 +203,7 @@ class TaskQueueScheduler:
         if not task:
             return
 
+        is_test = getattr(task, '_run_mode', 'normal') == 'test'
         module_config = self.task_configs.get(module_name, {}).get("module", {})
         module_display_name = module_manager.modules.get(module_name, {}).get("meta", {}).get("display_name", module_name)
 
@@ -220,24 +221,35 @@ class TaskQueueScheduler:
 
             task.last_run = datetime.now()
 
-            # 发送通知
+            # 测试模式标记通知，不写入数据
+            if is_test:
+                result.message = f"[测试] {result.message}"
+                if result.notify_title:
+                    result.notify_title = f"[测试] {result.notify_title}"
+
             Notifier.notify_task_result(
                 module_name=module_name,
                 module_display_name=module_display_name,
                 module_config=module_config,
-                result={"success": result.success, "message": result.message}
+                result={
+                    "success": result.success,
+                    "message": result.message,
+                    "notify_title": result.notify_title,
+                    "notify_content": result.notify_content,
+                    "attachment_path": result.attachment_path
+                }
             )
 
         except Exception as e:
             task.status = TaskStatus.ERROR
             add_log("ERROR", f"执行异常: {str(e)}", module_name)
 
-            # 发送失败通知
+            error_msg = f"[测试] 执行异常: {str(e)}" if is_test else f"执行异常: {str(e)}"
             Notifier.notify_task_result(
                 module_name=module_name,
                 module_display_name=module_display_name,
                 module_config=module_config,
-                result={"success": False, "message": str(e)}
+                result={"success": False, "message": error_msg}
             )
 
         finally:
@@ -385,7 +397,7 @@ class TaskQueueScheduler:
             "task": task_info
         }
 
-    def run_now(self, module_name: str) -> bool:
+    def run_now(self, module_name: str, mode: str = "normal") -> bool:
         """立即执行任务"""
         with self._lock:
             if module_name in self.running_tasks:
@@ -393,6 +405,11 @@ class TaskQueueScheduler:
 
             # 从等待中移除
             self.waiting_tasks.pop(module_name, None)
+
+            # 设置运行模式（测试/正常）
+            task = self.task_instances.get(module_name)
+            if task:
+                task._run_mode = mode
 
             # 加入队列首位
             if module_name not in self.queue_tasks:

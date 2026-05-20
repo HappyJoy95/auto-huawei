@@ -174,12 +174,12 @@ async def get_task_scheduler_status(module_name: str):
 
 
 @app.post("/api/scheduler/task/{module_name}/run-now")
-async def run_task_now(module_name: str):
-    """立即执行任务"""
+async def run_task_now(module_name: str, mode: str = "normal"):
+    """立即执行任务，mode=test 表示测试模式（不写数据文件）"""
     from module.tasks.scheduler import get_scheduler
     scheduler = get_scheduler()
     if scheduler:
-        success = scheduler.run_now(module_name)
+        success = scheduler.run_now(module_name, mode=mode)
         return {"success": success}
     return {"success": False}
 

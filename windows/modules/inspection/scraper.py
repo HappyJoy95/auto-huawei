@@ -310,10 +310,12 @@ class SmartSalesScraper:
             self._swipe(540, 1500, 540, 800, duration=300)
             time.sleep(1)
 
-    def fetch_inspection_data(self, stores: List[Dict], output_file: str = None) -> List[Dict]:
+    def fetch_inspection_data(self, stores: List[Dict], output_file: str = None, dry_run: bool = False) -> List[Dict]:
         """采集多个门店的巡检数据"""
         self._log("INFO", f"fetch_inspection_data 开始执行")
         self._log("INFO", f"门店列表数量: {len(stores) if stores else 0}")
+        if dry_run:
+            self._log("INFO", "测试模式: 不会写入文件")
 
         if not stores:
             self._log("ERROR", "门店列表为空!")
@@ -453,7 +455,7 @@ class SmartSalesScraper:
                     self._log("INFO", f"年度: {info.get('yearly_count', 0)}次/{info.get('yearly_score', 0)}分")
 
                     # 保存到文件
-                    if output_file:
+                    if output_file and not dry_run:
                         with open(output_file, 'w', encoding='utf-8') as f:
                             json.dump({
                                 'crawl_time': datetime.now().isoformat(),
@@ -461,6 +463,8 @@ class SmartSalesScraper:
                                 'stores': results
                             }, f, ensure_ascii=False, indent=2)
                         self._log("INFO", "已保存到文件")
+                    elif dry_run:
+                        self._log("INFO", f"测试模式: 跳过写入文件")
             else:
                 self._log("WARNING", f"无法获取门店数据: {short_name}")
 

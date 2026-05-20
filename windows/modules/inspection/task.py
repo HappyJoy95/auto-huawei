@@ -45,9 +45,12 @@ class InspectionTask(BaseTask):
 
             # 从模块配置读取门店列表，从全局配置读取 ADB 端口
             stores = self.config.get('stores', [])
+            dry_run = self.dry_run
             adb_port = Config.get_adb_port()
             self.log("INFO", f"ADB端口: {adb_port}")
             self.log("INFO", f"门店数量: {len(stores) if stores else 0}")
+            if dry_run:
+                self.log("INFO", "测试模式: 不会写入数据文件")
 
             if not stores:
                 self.log("ERROR", "门店列表为空，请检查配置")
@@ -66,7 +69,8 @@ class InspectionTask(BaseTask):
                 self.log("INFO", "开始调用 fetch_inspection_data...")
                 results = scraper.fetch_inspection_data(
                     stores=[{'name': s} for s in stores] if stores and isinstance(stores[0], str) else stores,
-                    output_file=str(data_file)
+                    output_file=str(data_file),
+                    dry_run=dry_run
                 )
                 self.log("INFO", f"fetch_inspection_data 返回，结果数量: {len(results) if results else 0}")
 
@@ -78,7 +82,11 @@ class InspectionTask(BaseTask):
                 self.update_progress(70, f"采集完成，新增 {new_count} 条")
 
                 # 找出有变化的门店
-                changed_stores = self._find_changed_stores(prev_latest, data_file)
+                if dry_run:
+                    # 测试模式: data_file 未写入，从内存结果直接计算变化
+                    changed_stores = self._find_changed_stores_from_results(prev_latest, results)
+                else:
+                    changed_stores = self._find_changed_stores(prev_latest, data_file)
                 self.log("INFO", f"有变化的门店: {len(changed_stores)} 个")
 
                 self.status = TaskStatus.COMPLETED
@@ -87,7 +95,7 @@ class InspectionTask(BaseTask):
 
                 # 生成通知内容
                 notify_title = f"📊 门店点检报告"
-                notify_content = self._format_notify_content(changed_stores, new_count, len(results))
+                notify_content = self._format_notify_content(changed_stores, new_count, len(results), prev_latest)
 
                 return TaskResult(
                     success=True,
@@ -141,6 +149,19 @@ class InspectionTask(BaseTask):
     def _find_changed_stores(self, prev_latest: dict, data_file: Path) -> list:
         """找出有变化的门店（用年度数据判断）"""
         new_latest = self._get_latest_records(data_file)
+        return self._diff_latest(prev_latest, new_latest)
+
+    def _find_changed_stores_from_results(self, prev_latest: dict, results: list) -> list:
+        """从内存结果中找出有变化的门店（用于测试模式）"""
+        new_latest = {}
+        for record in results:
+            name = record.get('name', '')
+            if name:
+                if name not in new_latest or record.get('crawl_time', '') > new_latest[name].get('crawl_time', ''):
+                    new_latest[name] = record
+        return self._diff_latest(prev_latest, new_latest)
+
+    def _diff_latest(self, prev_latest: dict, new_latest: dict) -> list:
         changed = []
 
         for name, record in new_latest.items():
@@ -160,7 +181,7 @@ class InspectionTask(BaseTask):
 
         return changed
 
-    def _format_notify_content(self, changed_stores: list, new_count: int, total: int) -> str:
+    def _format_notify_content(self, changed_stores: list, new_count: int, total: int, prev_latest: dict = None) -> str:
         """格式化通知内容"""
         lines = [f"共 {total} 条记录，新增 {new_count} 条"]
 
@@ -170,7 +191,10 @@ class InspectionTask(BaseTask):
                 name = store.get('short_name', store.get('name', '未知'))
                 mc = store['monthly_count']
                 ms = store['monthly_score']
-                lines.append(f"**{name}**  月度{mc}次/{ms}分")
+
+                store_name = store.get('name', '')
+                tag = "(新) " if prev_latest and store_name not in prev_latest else ""
+                lines.append(f"**{name}** {tag}月度{mc}次/{ms}分")
 
             if len(changed_stores) > 15:
                 lines.append(f"... 还有 {len(changed_stores) - 15} 个门店")

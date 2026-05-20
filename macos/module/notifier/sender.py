@@ -3,8 +3,10 @@
 """
 import requests
 import smtplib
+import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
 from typing import Optional, Dict, Any
 from datetime import datetime
 import yaml
@@ -24,19 +26,21 @@ class Notifier:
         return {}
 
     @classmethod
-    def send(cls, notify_type: str, target: str, title: str, content: str) -> bool:
+    def send(cls, notify_type: str, target: str, title: str, content: str,
+             attachment_path: str = None) -> bool:
         """
         发送通知
         :param notify_type: wechat 或 email
         :param target: webhook地址 或 邮箱地址
         :param title: 标题
         :param content: 内容
+        :param attachment_path: 附件文件路径（仅邮件支持）
         :return: 是否成功
         """
         if notify_type == "wechat":
             return cls._send_wechat(target, title, content)
         elif notify_type == "email":
-            return cls._send_email(target, title, content)
+            return cls._send_email(target, title, content, attachment_path=attachment_path)
         else:
             print(f"[Notifier] Unknown notify type: {notify_type}")
             return False
@@ -74,7 +78,8 @@ class Notifier:
         return False
 
     @classmethod
-    def _send_email(cls, to_email: str, title: str, content: str) -> bool:
+    def _send_email(cls, to_email: str, title: str, content: str,
+                    attachment_path: str = None) -> bool:
         """发送邮件"""
         global_config = cls.get_global_config()
 
@@ -99,6 +104,21 @@ class Notifier:
 
             msg.attach(MIMEText(content, "plain", "utf-8"))
 
+            # 添加附件
+            if attachment_path:
+                attach_file = Path(attachment_path)
+                if attach_file.exists():
+                    with open(attach_file, "rb") as f:
+                        part = MIMEBase("application", "octet-stream")
+                        part.set_payload(f.read())
+                    base64.encode(part)
+                    part.add_header(
+                        "Content-Disposition",
+                        f"attachment; filename={attach_file.name}"
+                    )
+                    msg.attach(part)
+                    print(f"[Notifier] Attached file: {attach_file.name}")
+
             with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
                 server.login(smtp_user, smtp_password)
                 server.sendmail(smtp_user, to_email, msg.as_string())
@@ -118,7 +138,7 @@ class Notifier:
         :param module_name: 模块名
         :param module_display_name: 显示名
         :param module_config: 模块配置
-        :param result: 执行结果
+        :param result: 执行结果，支持 success, message, notify_title, notify_content, attachment_path
         """
         # 获取全局配置
         global_config = cls.get_global_config()
@@ -148,11 +168,20 @@ class Notifier:
         message = result.get("message", "")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if success:
-            title = f"✅ {module_display_name} 执行成功"
-            content = f"模块: {module_display_name}\n时间: {timestamp}\n结果: {message}"
+        # 优先使用模块自定义的通知标题和内容
+        notify_title = result.get("notify_title")
+        notify_content = result.get("notify_content")
+        if notify_title and notify_content:
+            title = notify_title
+            content = notify_content
         else:
-            title = f"❌ {module_display_name} 执行失败"
-            content = f"模块: {module_display_name}\n时间: {timestamp}\n错误: {message}"
+            if success:
+                title = f"✅ {module_display_name} 执行成功"
+                content = f"模块: {module_display_name}\n时间: {timestamp}\n结果: {message}"
+            else:
+                title = f"❌ {module_display_name} 执行失败"
+                content = f"模块: {module_display_name}\n时间: {timestamp}\n错误: {message}"
 
-        cls.send(notify_type, notify_target, title, content)
+        attachment_path = result.get("attachment_path")
+        cls.send(notify_type, notify_target, title, content,
+                 attachment_path=attachment_path)

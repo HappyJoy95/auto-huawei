@@ -29,6 +29,7 @@ class TaskResult:
     end_time: Optional[datetime] = None
     notify_title: Optional[str] = None
     notify_content: Optional[str] = None
+    attachment_path: Optional[str] = None
 
 
 @dataclass
@@ -59,6 +60,12 @@ class BaseTask(ABC):
         self._pause_event = threading.Event()
         self._status_callback: Optional[Callable] = None
         self._log_callback: Optional[Callable] = None
+        self._run_mode: str = "normal"
+
+    @property
+    def dry_run(self) -> bool:
+        """测试模式不写入数据"""
+        return self._run_mode == "test"
 
     @abstractmethod
     def run(self) -> TaskResult:
