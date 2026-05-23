@@ -13,6 +13,7 @@ fields:
       - key: url
         label: 店铺链接
         type: text
+        width: "300px"
         placeholder: "大众点评店铺详情页链接"
 
   - key: max_reviews
