@@ -221,7 +221,7 @@
                 <template v-for="subField in field.fields" :key="subField.key">
                   <a-input
                     v-model="item[subField.key]"
-                    :placeholder="subField.label"
+                    :placeholder="subField.placeholder || subField.label"
                     :style="{ width: subField.width || 'auto', flex: subField.width ? 'none' : '1' }"
                   />
                 </template>
