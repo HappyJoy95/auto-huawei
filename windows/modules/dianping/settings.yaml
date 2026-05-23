@@ -1,0 +1,63 @@
+# 大众点评模块配置定义
+fields:
+  - key: stores
+    label: 店铺列表
+    type: object_list
+    default: []
+    fields:
+      - key: name
+        label: 店铺名称
+        type: text
+        width: "200px"
+      - key: url
+        label: 店铺链接
+        type: text
+        placeholder: "大众点评店铺详情页链接"
+
+  - key: max_reviews
+    label: 每店最大评论数
+    type: number
+    default: 50
+    min: 10
+    max: 200
+
+  - key: request_delay
+    label: 请求间隔(秒)
+    type: number
+    default: 5
+    min: 3
+    max: 30
+    hint: "建议 5-10 秒，过快可能触发反爬"
+
+  - key: use_proxy
+    label: 使用代理
+    type: switch
+    default: false
+
+  - key: proxy_url
+    label: 代理地址
+    type: text
+    show_if: "use_proxy"
+    placeholder: "http://127.0.0.1:7890"
+
+  - key: notify_enabled
+    label: 启用推送
+    type: switch
+    default: false
+
+  - key: notify_type
+    label: 推送方式
+    type: select
+    default: "wechat"
+    show_if: "notify_enabled"
+    options:
+      - value: "wechat"
+        label: "企业微信"
+      - value: "email"
+        label: "邮箱"
+
+  - key: notify_target
+    label: 推送目标
+    type: text
+    show_if: "notify_enabled"
+    placeholder: "企业微信填Webhook URL，邮箱填邮箱地址"

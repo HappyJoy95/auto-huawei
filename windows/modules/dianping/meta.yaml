@@ -1,0 +1,5 @@
+name: dianping
+display_name: 大众点评
+description: 大众点评店铺评论与星级数据采集
+icon: star
+enabled: true
