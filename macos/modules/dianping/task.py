@@ -43,8 +43,9 @@ class DianpingTask(BaseTask):
                     end_time=datetime.now()
                 )
 
-            self.log("INFO", f"开始采集 {len(stores)} 个店铺")
-            self.update_progress(5, f"准备采集 {len(stores)} 个店铺...")
+            mode_text = "[测试模式] " if self.dry_run else ""
+            self.log("INFO", f"{mode_text}开始采集 {len(stores)} 个店铺")
+            self.update_progress(5, f"{mode_text}准备采集 {len(stores)} 个店铺...")
 
             # 创建采集器
             scraper = DianpingScraper(proxy=proxy_url, headless=True)
@@ -60,7 +61,7 @@ class DianpingTask(BaseTask):
                 stores=stores,
                 max_reviews=max_reviews,
                 delay=request_delay,
-                output_file=str(data_file),
+                output_file=str(data_file) if not self.dry_run else None,
                 progress_callback=progress_callback
             )
 
