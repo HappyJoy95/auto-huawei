@@ -48,7 +48,7 @@ class DianpingTask(BaseTask):
             self.update_progress(5, f"{mode_text}准备采集 {len(stores)} 个店铺...")
 
             # 创建采集器
-            scraper = DianpingScraper(proxy=proxy_url, headless=True)
+            scraper = DianpingScraper(proxy=proxy_url, headless=True, log_callback=self.log)
 
             # 进度回调
             def progress_callback(current, total, message):
