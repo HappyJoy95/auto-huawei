@@ -129,6 +129,7 @@ async def save_module_config(module_name: str, config: dict):
     """保存模块配置"""
     try:
         module_manager.save_module_config(module_name, config)
+        scheduler.reload_task(module_name)
         return {"success": True, "message": "模块配置已保存"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
