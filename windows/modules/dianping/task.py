@@ -65,6 +65,16 @@ class DianpingTask(BaseTask):
                 progress_callback=progress_callback
             )
 
+            # 输出详细结果用于调试
+            for data in all_data:
+                store_info = data.get('store_info')
+                if store_info is None:
+                    self.log("WARNING", "店铺信息获取失败: store_info 为 None")
+                elif store_info.get('error'):
+                    self.log("ERROR", f"店铺 {store_info.get('name', '未知')} 获取失败: {store_info.get('error')}")
+                else:
+                    self.log("INFO", f"店铺 {store_info.get('name')} 采集成功，评论数: {len(data.get('reviews', []))}")
+
             # 统计结果
             total_reviews = sum(len(d.get('reviews', [])) for d in all_data)
             success_count = sum(1 for d in all_data if d.get('store_info') and not d.get('store_info', {}).get('error'))

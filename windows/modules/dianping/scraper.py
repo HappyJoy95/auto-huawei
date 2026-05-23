@@ -57,17 +57,25 @@ class DianpingScraper:
     DELAY_MIN = 3.0
     DELAY_MAX = 8.0
 
-    def __init__(self, proxy: str = None, headless: bool = True):
+    def __init__(self, proxy: str = None, headless: bool = True, log_callback=None):
         """
         初始化采集器
 
         Args:
             proxy: 代理地址，如 "http://127.0.0.1:7890"
             headless: 是否无头模式
+            log_callback: 日志回调函数
         """
         self.proxy = proxy
         self.headless = headless
+        self.log_callback = log_callback
         self.fetcher = None
+
+    def _log(self, level: str, msg: str):
+        """输出日志"""
+        if self.log_callback:
+            self.log_callback(level, msg)
+        print(f"[{level}] {msg}")
 
     def _get_fetcher(self):
         """获取 Scrapling fetcher"""
@@ -126,8 +134,8 @@ class DianpingScraper:
         Returns:
             店铺信息
         """
-        print(f"\n获取店铺信息: {store_name}")
-        print(f"  URL: {store_url}")
+        self._log("INFO", f"获取店铺信息: {store_name}")
+        self._log("INFO", f"URL: {store_url}")
 
         try:
             fetcher = self._get_fetcher()
@@ -186,14 +194,14 @@ class DianpingScraper:
                 crawl_time=datetime.now()
             )
 
-            print(f"  店铺: {name}")
-            print(f"  评分: {rating}")
-            print(f"  评论数: {review_count}")
+            self._log("INFO", f"店铺: {name}, 评分: {rating}, 评论数: {review_count}")
 
             return store_info
 
         except Exception as e:
-            print(f"  获取店铺信息失败: {e}")
+            self._log("ERROR", f"获取店铺信息失败: {e}")
+            import traceback
+            self._log("ERROR", traceback.format_exc())
             return None
 
     def fetch_reviews(self, store_url: str, store_name: str,
@@ -209,7 +217,7 @@ class DianpingScraper:
         Returns:
             评论列表
         """
-        print(f"\n采集评论: {store_name}")
+        self._log("INFO", f"采集评论: {store_name}")
 
         reviews = []
         seen_content = set()
@@ -244,11 +252,11 @@ class DianpingScraper:
             for selector in review_selectors:
                 review_elements = page.css(selector)
                 if review_elements:
-                    print(f"  使用选择器: {selector}, 找到 {len(review_elements)} 条评论")
+                    self._log("INFO", f"使用选择器: {selector}, 找到 {len(review_elements)} 条评论")
                     break
 
             if not review_elements:
-                print("  未找到评论元素，尝试其他方式...")
+                self._log("WARNING", "未找到评论元素，尝试其他方式...")
                 # 尝试查找所有可能的评论容器
                 all_divs = page.css('div')
                 for div in all_divs[:100]:  # 只检查前100个
@@ -322,7 +330,7 @@ class DianpingScraper:
                     )
                     reviews.append(review)
 
-                    print(f"    [{len(reviews)}] {user_name or '匿名'}: {content[:30]}...")
+                    self._log("INFO", f"[{len(reviews)}] {user_name or '匿名'}: {content[:30]}...")
 
                     if len(reviews) >= max_reviews:
                         break
@@ -331,9 +339,11 @@ class DianpingScraper:
                     continue
 
         except Exception as e:
-            print(f"  采集评论失败: {e}")
+            self._log("ERROR", f"采集评论失败: {e}")
+            import traceback
+            self._log("ERROR", traceback.format_exc())
 
-        print(f"  共采集 {len(reviews)} 条评论")
+        self._log("INFO", f"共采集 {len(reviews)} 条评论")
         return reviews
 
     def fetch_store(self, store_url: str, store_name: str,
@@ -382,13 +392,13 @@ class DianpingScraper:
             store_url = store.get('url')
 
             if not store_url:
-                print(f"[{i+1}/{total}] {store_name} 缺少URL，跳过")
+                self._log("WARNING", f"[{i+1}/{total}] {store_name} 缺少URL，跳过")
                 continue
 
             if progress_callback:
                 progress_callback(i + 1, total, f"正在采集: {store_name}")
 
-            print(f"\n[{i+1}/{total}] 采集: {store_name}")
+            self._log("INFO", f"[{i+1}/{total}] 采集: {store_name}")
 
             try:
                 data = self.fetch_store(store_url, store_name, max_reviews)
@@ -399,7 +409,9 @@ class DianpingScraper:
                     self._save_data(all_data, output_file)
 
             except Exception as e:
-                print(f"  采集失败: {e}")
+                self._log("ERROR", f"采集失败: {e}")
+                import traceback
+                self._log("ERROR", traceback.format_exc())
                 all_data.append({
                     'store_info': {'name': store_name, 'error': str(e)},
                     'reviews': [],
@@ -409,7 +421,7 @@ class DianpingScraper:
             # 延迟
             if i < total - 1:
                 actual_delay = delay + random.uniform(0, 2)
-                print(f"  等待 {actual_delay:.1f} 秒...")
+                self._log("INFO", f"等待 {actual_delay:.1f} 秒...")
                 time.sleep(actual_delay)
 
         return all_data
