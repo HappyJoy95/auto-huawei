@@ -275,9 +275,21 @@
 
         <div class="actions">
           <a-button @click="router.back()">取消</a-button>
+          <a-button type="outline" status="success" @click="runTest" :loading="testing">
+            <template #icon><icon-play-arrow /></template>
+            测试执行
+          </a-button>
           <a-button type="primary" @click="saveConfig" :loading="saving">
             保存配置
           </a-button>
+        </div>
+
+        <!-- 测试结果 -->
+        <div v-if="testResult" class="test-result">
+          <a-alert :type="testResult.success ? 'success' : 'error'">
+            <template #title>{{ testResult.success ? '执行成功' : '执行失败' }}</template>
+            {{ testResult.message }}
+          </a-alert>
         </div>
       </a-card>
     </div>
@@ -289,7 +301,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import { useModuleStore } from '../stores/module'
 import { Message } from '@arco-design/web-vue'
-import { IconLeft, IconDelete, IconPlus, IconClose } from '@arco-design/web-vue/es/icon'
+import { IconLeft, IconDelete, IconPlus, IconClose, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -303,6 +315,8 @@ const moduleDisplayName = computed(() => {
 
 const loading = ref(true)
 const saving = ref(false)
+const testing = ref(false)
+const testResult = ref<{ success: boolean; message: string } | null>(null)
 const enabled = ref(true)
 
 // 定时任务配置
@@ -518,6 +532,29 @@ async function saveConfig() {
     Message.error('保存失败: ' + e)
   } finally {
     saving.value = false
+  }
+}
+
+async function runTest() {
+  testing.value = true
+  testResult.value = null
+
+  try {
+    const response = await fetch(`http://127.0.0.1:5001/api/scheduler/task/${moduleName.value}/run-now?mode=test`, {
+      method: 'POST'
+    })
+    const result = await response.json()
+
+    if (result.success) {
+      Message.success('任务已加入执行队列')
+      testResult.value = { success: true, message: '任务已开始执行，请查看 Dashboard 页面查看执行状态' }
+    } else {
+      testResult.value = { success: false, message: result.message || '启动失败' }
+    }
+  } catch (e) {
+    testResult.value = { success: false, message: '连接后端失败: ' + e }
+  } finally {
+    testing.value = false
   }
 }
 
@@ -854,5 +891,9 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--color-text-3);
   margin-top: 4px;
+}
+
+.test-result {
+  margin-top: 16px;
 }
 </style>

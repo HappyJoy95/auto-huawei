@@ -1,0 +1,14 @@
+{
+  "stores": [
+    {
+      "name": "海信",
+      "url": "https://www.dianping.com/shop/k97u2Q3dAcatpcvs"
+    }
+  ],
+  "max_reviews": 50,
+  "request_delay": 5,
+  "use_proxy": false,
+  "notify_enabled": true,
+  "notify_type": "wechat",
+  "notify_target": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=b4259b2a-c018-46bd-b65b-4a536c98e475"
+}
