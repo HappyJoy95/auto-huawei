@@ -5,6 +5,7 @@ from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import Config, DATA_DIR
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 import sys
 
 # 添加当前目录到路径
@@ -56,14 +57,19 @@ class DianpingTask(BaseTask):
                 self.update_progress(progress, message)
                 self.log("INFO", message)
 
-            # 执行采集
-            all_data = scraper.fetch_stores(
-                stores=stores,
-                max_reviews=max_reviews,
-                delay=request_delay,
-                output_file=str(data_file) if not self.dry_run else None,
-                progress_callback=progress_callback
-            )
+            # 在线程池中执行采集（避免 asyncio 冲突）
+            def do_scrape():
+                return scraper.fetch_stores(
+                    stores=stores,
+                    max_reviews=max_reviews,
+                    delay=request_delay,
+                    output_file=str(data_file) if not self.dry_run else None,
+                    progress_callback=progress_callback
+                )
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(do_scrape)
+                all_data = future.result()
 
             # 输出详细结果用于调试
             for data in all_data:
