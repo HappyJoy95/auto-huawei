@@ -93,8 +93,7 @@ class InspectionTask(BaseTask):
                 self.update_progress(100, f"完成，共 {len(results)} 条记录")
                 self.log("SUCCESS", f"任务完成，共 {len(results)} 条记录，新增 {new_count} 条")
 
-                # 生成通知内容
-                notify_title = f"📊 门店点检报告"
+                notify_title = "📊 门店点检报告"
                 notify_content = self._format_notify_content(changed_stores, new_count, len(results), prev_latest)
 
                 return TaskResult(
@@ -183,21 +182,24 @@ class InspectionTask(BaseTask):
 
     def _format_notify_content(self, changed_stores: list, new_count: int, total: int, prev_latest: dict = None) -> str:
         """格式化通知内容"""
-        lines = [f"共 {total} 条记录，新增 {new_count} 条"]
+        lines = [
+            "📊 门店点检完成",
+            "━━━━━━━━━━━━━━━━━━━",
+            f"本次记录：{total}条 | 新增记录：{new_count}条 | 变化门店：{len(changed_stores)}家",
+        ]
 
         if changed_stores:
-            lines.append("")
-            for store in changed_stores[:15]:  # 最多显示15个
+            lines.extend(["", "⚠️ 变化门店"])
+            for index, store in enumerate(changed_stores[:10], 1):
                 name = store.get('short_name', store.get('name', '未知'))
                 mc = store['monthly_count']
                 ms = store['monthly_score']
-
                 store_name = store.get('name', '')
-                tag = "(新) " if prev_latest and store_name not in prev_latest else ""
-                lines.append(f"**{name}** {tag}月度{mc}次/{ms}分")
+                tag = "新门店" if prev_latest and store_name not in prev_latest else "有变化"
+                lines.append(f"{index}. {name} - 月度{mc}次/{ms}分（{tag}）")
 
-            if len(changed_stores) > 15:
-                lines.append(f"... 还有 {len(changed_stores) - 15} 个门店")
+            if len(changed_stores) > 10:
+                lines.append(f"... 还有 {len(changed_stores) - 10} 家门店")
 
         lines.append(f"\n⏰ {datetime.now().strftime('%m-%d %H:%M')}")
         return "\n".join(lines)

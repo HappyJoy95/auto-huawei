@@ -1,4 +1,3 @@
-# 小红书模块配置定义
 fields:
   - key: max_posts_per_store
     label: 每店最大帖子数
@@ -20,8 +19,8 @@ fields:
 
   - key: notify_type
     label: 推送方式
-    type: select
-    default: "wechat"
+    type: checkbox
+    default: ["email"]
     show_if: "notify_enabled"
     options:
       - value: "wechat"
@@ -29,8 +28,14 @@ fields:
       - value: "email"
         label: "邮箱"
 
-  - key: notify_target
-    label: 推送目标
+  - key: notify_wechat_target
+    label: 企业微信 Webhook
     type: text
     show_if: "notify_enabled"
-    placeholder: "企业微信填Webhook URL，邮箱填邮箱地址"
+    placeholder: "企业微信机器人 Webhook URL"
+
+  - key: notify_email_target
+    label: 邮箱接收人
+    type: text
+    show_if: "notify_enabled"
+    placeholder: "接收通知的邮箱地址"

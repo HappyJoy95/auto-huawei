@@ -5,6 +5,7 @@ from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import Config, DATA_DIR
 from pathlib import Path
 from datetime import datetime
+from collections import defaultdict
 import contextlib
 import sys
 import traceback
@@ -137,12 +138,17 @@ class DouyinTask(BaseTask):
                 attachment_path = str(csv_file)
                 self.log("INFO", f"抖音新增 CSV: {csv_file} (仅包含本次新增的 {len(new_posts)} 条内容)")
 
+            notify_title = "📊 抖音采集报告"
+            notify_content = self._format_notify_content(new_posts, len(posts), accounts)
+
             return TaskResult(
                 success=True,
                 message=f"采集完成，共 {len(posts)} 条视频，新增 {len(new_posts)} 条",
                 data={"total": len(posts), "new": len(new_posts)},
                 start_time=start_time,
                 end_time=datetime.now(),
+                notify_title=notify_title,
+                notify_content=notify_content,
                 attachment_path=attachment_path
             )
 
@@ -164,3 +170,42 @@ class DouyinTask(BaseTask):
                     scraper.close()
                 except Exception as e:
                     self.log("ERROR", f"关闭抖音浏览器失败: {e}")
+
+    def _format_notify_content(self, new_posts: list, total_posts: int, accounts: list) -> str:
+        stats = defaultdict(lambda: {"count": 0, "likes": 0})
+        for post in new_posts:
+            stats[post.store_name]["count"] += 1
+            stats[post.store_name]["likes"] += post.likes or 0
+
+        top = sorted(
+            [
+                {"name": name, "count": data["count"], "likes": data["likes"]}
+                for name, data in stats.items()
+            ],
+            key=lambda item: (-item["count"], -item["likes"], item["name"])
+        )[:5]
+
+        account_names = [a.get("name") or a.get("short_name") for a in accounts if a.get("name") or a.get("short_name")]
+        zero_stores = [name for name in account_names if name not in stats]
+        total_likes = sum(item["likes"] for item in top) + sum(
+            data["likes"] for name, data in stats.items() if name not in {item["name"] for item in top}
+        )
+
+        lines = [
+            "📊 抖音采集完成",
+            "━━━━━━━━━━━━━━━━━━━",
+            f"本次新增：{len(new_posts)}条 | 当前累计：{total_posts}条 | 新增获赞：{total_likes}",
+        ]
+
+        if top:
+            lines.extend(["", "🏆 TOP门店"])
+            for index, item in enumerate(top, 1):
+                lines.append(f"{index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
+
+        if zero_stores:
+            shown = "、".join(zero_stores[:8])
+            extra = f" 等{len(zero_stores)}家" if len(zero_stores) > 8 else ""
+            lines.extend(["", f"⚠️ 本次零新增：{shown}{extra}"])
+
+        lines.append(f"\n⏰ {datetime.now().strftime('%m-%d %H:%M')}")
+        return "\n".join(lines)

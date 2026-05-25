@@ -5,6 +5,7 @@ from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import Config, DATA_DIR
 from pathlib import Path
 from datetime import datetime, timedelta
+from collections import defaultdict
 import sys
 
 # 添加当前目录到路径
@@ -100,12 +101,17 @@ class XiaohongshuTask(BaseTask):
                         ])
                 attachment_path = str(csv_file)
 
+            notify_title = "📊 小红书采集报告"
+            notify_content = self._format_notify_content(report_posts, len(posts), stores)
+
             return TaskResult(
                 success=True,
                 message=f"采集完成，共 {len(posts)} 条新增帖子，推送上周新增 {len(report_posts)} 条",
                 data={"total": len(posts), "weekly_total": len(report_posts)},
                 start_time=start_time,
                 end_time=datetime.now(),
+                notify_title=notify_title,
+                notify_content=notify_content,
                 attachment_path=attachment_path
             )
 
@@ -118,3 +124,39 @@ class XiaohongshuTask(BaseTask):
                 start_time=start_time,
                 end_time=datetime.now()
             )
+
+    def _format_notify_content(self, report_posts: list, total_posts: int, stores: list) -> str:
+        stats = defaultdict(lambda: {"count": 0, "likes": 0})
+        for post in report_posts:
+            stats[post.store_name]["count"] += 1
+            stats[post.store_name]["likes"] += post.likes or 0
+
+        top = sorted(
+            [
+                {"name": name, "count": data["count"], "likes": data["likes"]}
+                for name, data in stats.items()
+            ],
+            key=lambda item: (-item["count"], -item["likes"], item["name"])
+        )[:5]
+
+        zero_stores = [name for name in stores if name and name not in stats]
+        total_likes = sum(data["likes"] for data in stats.values())
+
+        lines = [
+            "📊 小红书采集完成",
+            "━━━━━━━━━━━━━━━━━━━",
+            f"上周新增：{len(report_posts)}条 | 本次采集：{total_posts}条 | 上周获赞：{total_likes}",
+        ]
+
+        if top:
+            lines.extend(["", "🏆 TOP门店"])
+            for index, item in enumerate(top, 1):
+                lines.append(f"{index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
+
+        if zero_stores:
+            shown = "、".join(zero_stores[:8])
+            extra = f" 等{len(zero_stores)}家" if len(zero_stores) > 8 else ""
+            lines.extend(["", f"⚠️ 上周零新增：{shown}{extra}"])
+
+        lines.append(f"\n⏰ {datetime.now().strftime('%m-%d %H:%M')}")
+        return "\n".join(lines)

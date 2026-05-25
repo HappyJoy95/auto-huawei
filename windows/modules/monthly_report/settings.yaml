@@ -1,0 +1,61 @@
+fields:
+  - key: report_month
+    label: 报告月份
+    type: text
+    default: ""
+    placeholder: "留空为上个月，格式：2026-05"
+
+  - key: top_limit
+    label: 排行榜数量
+    type: number
+    default: 5
+    min: 3
+    max: 20
+
+  - key: zero_post_warning
+    label: 启用零发布预警
+    type: switch
+    default: true
+
+  - key: include_douyin
+    label: 包含抖音数据
+    type: switch
+    default: true
+
+  - key: include_xiaohongshu
+    label: 包含小红书数据
+    type: switch
+    default: true
+
+  - key: include_inspection
+    label: 包含巡检数据
+    type: switch
+    default: true
+
+  - key: notify_enabled
+    label: 启用推送
+    type: switch
+    default: true
+
+  - key: notify_type
+    label: 推送方式
+    type: checkbox
+    default: ["email"]
+    show_if: "notify_enabled"
+    options:
+      - value: "wechat"
+        label: "企业微信"
+      - value: "email"
+        label: "邮箱"
+
+  - key: notify_wechat_target
+    label: 企业微信 Webhook
+    type: text
+    show_if: "notify_enabled"
+    placeholder: "企业微信机器人 Webhook URL"
+
+  - key: notify_email_target
+    label: 邮箱接收人
+    type: text
+    show_if: "notify_enabled"
+    placeholder: "接收月报的邮箱地址"

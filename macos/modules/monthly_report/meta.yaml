@@ -1,0 +1,5 @@
+name: monthly_report
+display_name: 月报
+description: 汇总抖音、小红书和巡检数据生成门店运营月报
+icon: file-text
+enabled: true
