@@ -1,0 +1,14 @@
+adbAddress: 127.0.0.1:16448
+checkInterval: 10
+concurrency: 1
+emulatorType: mumu
+headless: true
+logLevel: info
+logRetention: 7
+notifyLevel: all
+retryCount: 3
+smtpPassword: rpvcpimzcttbbhgh
+smtpPort: 587
+smtpServer: smtp.qq.com
+smtpUser: 305919832@qq.com
+taskTimeout: 30

@@ -40,7 +40,8 @@ echo ========================================
 echo.
 set NODE_ENV=development
 set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
-npx electron .
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -FilePath '.\node_modules\electron\dist\electron.exe' -ArgumentList '.' -PassThru; Set-Content -Path '.app.pid' -Value $p.Id; Wait-Process -Id $p.Id"
+if exist .app.pid del .app.pid >nul 2>&1
 
 echo.
 echo ========================================

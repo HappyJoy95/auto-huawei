@@ -5,11 +5,34 @@ from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import Config, DATA_DIR
 from pathlib import Path
 from datetime import datetime
+import contextlib
 import sys
+import traceback
 
 # 添加当前目录到路径
 sys.path.insert(0, str(Path(__file__).parent))
 from scraper import DouyinWebScraper
+
+
+class TaskLogWriter:
+    def __init__(self, task: BaseTask, level: str):
+        self.task = task
+        self.level = level
+        self._buffer = ""
+
+    def write(self, text: str):
+        self._buffer += text
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            line = line.strip()
+            if line:
+                self.task.log(self.level, line)
+
+    def flush(self):
+        line = self._buffer.strip()
+        if line:
+            self.task.log(self.level, line)
+        self._buffer = ""
 
 
 class DouyinTask(BaseTask):
@@ -21,22 +44,27 @@ class DouyinTask(BaseTask):
     def run(self) -> TaskResult:
         self.status = TaskStatus.RUNNING
         start_time = datetime.now()
+        scraper = None
 
         try:
-            # 数据目录
             douyin_data_dir = DATA_DIR / "douyin"
             douyin_data_dir.mkdir(parents=True, exist_ok=True)
             data_file = douyin_data_dir / "posts.json"
 
-            self.update_progress(10, "启动浏览器...")
-
-            # 获取配置
             browser_config = Config.get_browser_config()
             headless = self.config.get("headless", browser_config.get("headless", True))
             accounts = self.config.get("accounts", [])
             max_posts = self.config.get("max_posts_per_store", 50)
 
+            self.log("INFO", f"抖音数据目录: {douyin_data_dir}")
+            self.log("INFO", f"抖音数据文件: {data_file}")
+            self.log("INFO", f"抖音配置: headless={headless}, accounts={len(accounts)}, max_posts_per_store={max_posts}")
+            for index, account in enumerate(accounts, start=1):
+                account_url = account.get('douyin_url') or account.get('url')
+                self.log("INFO", f"账号[{index}]: name={account.get('name', '')}, short_name={account.get('short_name', '')}, url={'已配置' if account_url else '未配置'}")
+
             if not accounts:
+                self.log("ERROR", "未配置抖音账号列表")
                 return TaskResult(
                     success=False,
                     message="未配置抖音账号列表",
@@ -44,47 +72,95 @@ class DouyinTask(BaseTask):
                     end_time=datetime.now()
                 )
 
-            # 创建采集器
+            self.update_progress(10, "启动浏览器...")
             scraper = DouyinWebScraper(headless=headless)
+            self.log("INFO", f"cookies 文件: {scraper.cookies_file}")
+            self.log("INFO", f"浏览器数据目录: {scraper.user_data_dir}")
 
-            # 登录
-            if not scraper.login():
-                self.status = TaskStatus.ERROR
-                return TaskResult(
-                    success=False,
-                    message="抖音登录失败，请检查浏览器或手动扫码登录",
-                    start_time=start_time,
-                    end_time=datetime.now()
+            with contextlib.redirect_stdout(TaskLogWriter(self, "INFO")), contextlib.redirect_stderr(TaskLogWriter(self, "ERROR")):
+                self.update_progress(20, "检查抖音登录状态...")
+                if not scraper.login():
+                    self.status = TaskStatus.ERROR
+                    self.log("ERROR", "抖音登录失败，可能是 cookies 失效、扫码超时或浏览器启动失败")
+                    return TaskResult(
+                        success=False,
+                        message="抖音登录失败，请检查浏览器或手动扫码登录",
+                        start_time=start_time,
+                        end_time=datetime.now()
+                    )
+
+                self.update_progress(35, f"开始采集 {len(accounts)} 个账号...")
+                posts = scraper.fetch_stores(
+                    stores=accounts,
+                    max_posts_per_store=max_posts,
+                    output_file=str(data_file)
                 )
 
-            self.update_progress(30, f"开始采集 {len(accounts)} 个账号...")
-
-            # 执行采集
-            posts = scraper.fetch_stores(
-                stores=accounts,
-                max_posts_per_store=max_posts,
-                output_file=str(data_file)
-            )
-
-            scraper.close()
-
             self.status = TaskStatus.COMPLETED
-            self.update_progress(100, f"采集完成，共 {len(posts)} 条视频")
+
+            # 只保留新增内容：对比 data_file 中的已有数据，找出新增的帖子
+            new_posts = []
+            try:
+                if data_file.exists():
+                    with open(data_file, 'r', encoding='utf-8') as f:
+                        import json
+                        existing_data = json.load(f)
+                        existing_links = {post.get('post_link') for post in existing_data.get('posts', [])}
+
+                        # 找出新增的帖子（以采集时间为准，采集时间在任务开始后的为新增）
+                        for p in posts:
+                            if p.crawl_time >= start_time:
+                                new_posts.append(p)
+
+                self.update_progress(100, f"采集完成，共 {len(posts)} 条视频，新增 {len(new_posts)} 条")
+                self.log("INFO", f"抖音采集完成: total={len(posts)}, new={len(new_posts)}")
+            except Exception as e:
+                self.log("ERROR", f"筛选新增内容失败: {e}")
+                new_posts = posts
+
+            attachment_path = None
+            if new_posts:
+                import csv
+                csv_file = douyin_data_dir / f"douyin_new_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                csv_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['门店名称', '标题', '点赞数', '视频链接', '采集时间'])
+                    for p in new_posts:
+                        writer.writerow([
+                            p.store_name,
+                            p.title,
+                            p.likes or 0,
+                            p.post_link or '',
+                            p.crawl_time.strftime('%Y-%m-%d %H:%M:%S')
+                        ])
+                attachment_path = str(csv_file)
+                self.log("INFO", f"抖音新增 CSV: {csv_file} (仅包含本次新增的 {len(new_posts)} 条内容)")
 
             return TaskResult(
                 success=True,
-                message=f"采集完成，共 {len(posts)} 条视频",
-                data={"total": len(posts)},
+                message=f"采集完成，共 {len(posts)} 条视频，新增 {len(new_posts)} 条",
+                data={"total": len(posts), "new": len(new_posts)},
                 start_time=start_time,
-                end_time=datetime.now()
+                end_time=datetime.now(),
+                attachment_path=attachment_path
             )
 
         except Exception as e:
             self.status = TaskStatus.ERROR
+            error_detail = traceback.format_exc()
+            self.log("ERROR", f"抖音任务异常: {e}")
+            self.log("ERROR", error_detail)
             return TaskResult(
                 success=False,
                 message=f"执行失败: {str(e)}",
-                error=str(e),
+                error=error_detail,
                 start_time=start_time,
                 end_time=datetime.now()
             )
+        finally:
+            if scraper:
+                try:
+                    scraper.close()
+                except Exception as e:
+                    self.log("ERROR", f"关闭抖音浏览器失败: {e}")

@@ -48,9 +48,10 @@ class DouyinWebScraper:
         self.page: Optional[Page] = None
 
         # 设置 cookies 保存路径
-        project_root = Path(__file__).parent.parent
-        self.cookies_file = cookies_file or str(project_root / "data" / "douyin" / "cookies.json")
-        self.user_data_dir = user_data_dir or str(project_root / "data" / "douyin" / "browser_data")
+        from module.config.config import DATA_DIR
+        douyin_data_dir = DATA_DIR / "douyin"
+        self.cookies_file = cookies_file or str(douyin_data_dir / "cookies.json")
+        self.user_data_dir = user_data_dir or str(douyin_data_dir / "browser_data")
 
         # 确保目录存在
         Path(self.cookies_file).parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +132,31 @@ class DouyinWebScraper:
         except Exception as e:
             return False
 
+    def _wait_login_stable(self, max_wait: int = 120) -> bool:
+        print("检测到登录状态，请完成页面上的验证；验证完成后会自动继续...")
+        start_time = time.time()
+        stable_count = 0
+        last_print = 0
+
+        while time.time() - start_time < max_wait:
+            elapsed = int(time.time() - start_time)
+            if elapsed - last_print >= 10:
+                print(f"  等待验证完成... 已等待 {elapsed} 秒")
+                last_print = elapsed
+
+            if self._check_login_status():
+                stable_count += 1
+                if stable_count >= 5:
+                    print("[OK] 登录状态已稳定，继续采集")
+                    return True
+            else:
+                stable_count = 0
+
+            time.sleep(3)
+
+        print("验证等待超时，请确认页面是否已完成验证")
+        return False
+
     def login(self) -> bool:
         """
         登录抖音
@@ -145,7 +171,7 @@ class DouyinWebScraper:
         print("检查登录状态...")
         if self._check_login_status():
             print("已登录")
-            return True
+            return self._wait_login_stable(max_wait=30)
 
         print("\n" + "=" * 60)
         print("[!] 请在打开的浏览器中扫码登录！")
@@ -166,9 +192,11 @@ class DouyinWebScraper:
                 last_print = elapsed
 
             if self._check_login_status():
-                print("\n[OK] 登录成功！")
-                self._save_cookies()
-                return True
+                print("\n[OK] 已扫码登录！")
+                if self._wait_login_stable():
+                    self._save_cookies()
+                    return True
+                return False
             time.sleep(2)
 
         print("登录超时")
@@ -561,7 +589,7 @@ class DouyinWebScraper:
         # 采集每个门店
         for i, store in enumerate(stores):
             store_name = store['name']
-            store_url = store.get('douyin_url', '')
+            store_url = store.get('douyin_url') or store.get('url') or ''
 
             print(f"\n[{i+1}/{len(stores)}] 采集: {store_name}")
 

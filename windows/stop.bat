@@ -1,4 +1,5 @@
 @echo off
+cd /d %~dp0
 echo ========================================
 echo   Stopping all services...
 echo ========================================
@@ -19,7 +20,7 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5001 ^| findstr LISTENING') 
 :: Stop Electron only if it was launched by this project (via PID file)
 if exist .app.pid (
     set /p APP_PID=<.app.pid
-    taskkill /F /PID %APP_PID% >nul 2>&1
+    taskkill /F /T /PID %APP_PID% >nul 2>&1
     del .app.pid >nul 2>&1
     echo Stopped Electron (PID %APP_PID%)
 ) else (

@@ -23,7 +23,7 @@ class ModuleManager:
             return
 
         for module_dir in MODULES_DIR.iterdir():
-            if module_dir.is_dir() and not module_dir.name.startswith("_"):
+            if module_dir.is_dir() and not module_dir.name.startswith("_") and (module_dir / "meta.yaml").exists():
                 self.load_module(module_dir.name)
 
     def load_module(self, module_name: str):
