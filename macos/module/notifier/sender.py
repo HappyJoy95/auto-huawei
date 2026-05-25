@@ -83,13 +83,13 @@ class Notifier:
         """发送邮件"""
         global_config = cls.get_global_config()
 
-        smtp_server = global_config.get("smtp_server", "smtp.qq.com")
-        smtp_port = global_config.get("smtp_port", 465)
-        smtp_user = global_config.get("smtp_user", "")
-        smtp_password = global_config.get("smtp_password", "")
+        smtp_server = global_config.get("smtp_server") or global_config.get("smtpServer") or "smtp.qq.com"
+        smtp_port = int(global_config.get("smtp_port") or global_config.get("smtpPort") or 465)
+        smtp_user = global_config.get("smtp_user") or global_config.get("smtpUser") or ""
+        smtp_password = global_config.get("smtp_password") or global_config.get("smtpPassword") or ""
 
         if not smtp_user or not smtp_password:
-            print("[Notifier] Email not configured (smtp_user/smtp_password)")
+            print("[Notifier] Email not configured (smtp user/password)")
             return False
 
         if not to_email:
@@ -119,9 +119,15 @@ class Notifier:
                     msg.attach(part)
                     print(f"[Notifier] Attached file: {attach_file.name}")
 
-            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-                server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, to_email, msg.as_string())
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, msg.as_string())
+            else:
+                with smtplib.SMTP(smtp_server, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, msg.as_string())
 
             print(f"[Notifier] Email sent to {to_email}: {title}")
             return True

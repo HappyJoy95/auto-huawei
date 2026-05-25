@@ -83,6 +83,14 @@
         <div class="form-hint">
           提示：使用QQ邮箱需开启SMTP服务并获取授权码，企业微信通知在模块设置中配置Webhook
         </div>
+        <div class="email-test-section">
+          <a-button type="outline" @click="testEmail" :loading="testingEmail">
+            发送测试邮件
+          </a-button>
+          <span v-if="testEmailResult" :class="['test-result', testEmailSuccess ? 'success' : 'error']">
+            {{ testEmailResult }}
+          </span>
+        </div>
       </a-card>
 
       <!-- 日志设置 -->
@@ -123,6 +131,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
 
 const saving = ref(false)
+const testingEmail = ref(false)
+const testEmailResult = ref('')
+const testEmailSuccess = ref(false)
 
 const config = reactive({
   checkInterval: 10,
@@ -171,6 +182,32 @@ async function saveConfig() {
   }
 }
 
+async function testEmail() {
+  testingEmail.value = true
+  testEmailResult.value = ''
+  try {
+    const response = await fetch('http://127.0.0.1:5001/api/config/test-email', {
+      method: 'POST'
+    })
+    const result = await response.json()
+    if (result?.success) {
+      testEmailSuccess.value = true
+      testEmailResult.value = result.message || '测试邮件发送成功'
+      Message.success(testEmailResult.value)
+    } else {
+      testEmailSuccess.value = false
+      testEmailResult.value = result?.detail || '发送失败'
+      Message.error(testEmailResult.value)
+    }
+  } catch (e) {
+    testEmailSuccess.value = false
+    testEmailResult.value = '请求失败，请检查后端服务'
+    Message.error(testEmailResult.value)
+  } finally {
+    testingEmail.value = false
+  }
+}
+
 onMounted(() => {
   loadConfig()
 })
@@ -213,5 +250,24 @@ onMounted(() => {
 
 .form-actions {
   margin-top: 24px;
+}
+
+.email-test-section {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.test-result {
+  font-size: 14px;
+}
+
+.test-result.success {
+  color: rgb(var(--green-6));
+}
+
+.test-result.error {
+  color: rgb(var(--red-6));
 }
 </style>

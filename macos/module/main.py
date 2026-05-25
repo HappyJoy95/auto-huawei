@@ -210,7 +210,7 @@ async def test_email():
     from datetime import datetime
 
     config = Notifier.get_global_config()
-    smtp_user = config.get("smtp_user", "")
+    smtp_user = config.get("smtp_user") or config.get("smtpUser") or ""
 
     if not smtp_user:
         raise HTTPException(status_code=400, detail="发件邮箱未配置")

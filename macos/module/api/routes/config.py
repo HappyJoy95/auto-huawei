@@ -1,7 +1,7 @@
 """
 配置管理 API
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict
 import yaml
@@ -66,13 +66,25 @@ async def set_config(key: str, request: ConfigUpdateRequest):
 
 
 @router.post("/test-email")
-async def test_email(request: EmailTestRequest):
+async def test_email(request: EmailTestRequest | None = None):
     """测试邮件发送"""
     from module.notifier.sender import Notifier
+    from datetime import datetime
+
+    config = Notifier.get_global_config()
+    smtp_user = config.get("smtp_user") or config.get("smtpUser") or ""
+    to_email = request.to_email if request else smtp_user
+
+    if not to_email:
+        raise HTTPException(status_code=400, detail="发件邮箱未配置")
+
     success = Notifier.send(
         "email",
-        request.to_email,
-        "测试邮件",
-        "这是一封来自 AutoController 的测试邮件，配置正确！"
+        to_email,
+        "Auto Controller 测试邮件",
+        f"这是一封测试邮件\n\n发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n如果您收到此邮件，说明邮箱配置正确。"
     )
-    return {"success": success}
+
+    if success:
+        return {"success": True, "message": f"测试邮件已发送至 {to_email}"}
+    raise HTTPException(status_code=500, detail="邮件发送失败，请检查SMTP配置")
