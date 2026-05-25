@@ -4,12 +4,23 @@
 from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import Config, DATA_DIR
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 
 # 添加当前目录到路径
 sys.path.insert(0, str(Path(__file__).parent))
 from scraper import XiaohongshuScraper
+
+
+def is_previous_week_post(post_time: str, now: datetime) -> bool:
+    try:
+        post_date = datetime.strptime(post_time, "%y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+
+    this_monday = now.date() - timedelta(days=now.weekday())
+    previous_monday = this_monday - timedelta(days=7)
+    return previous_monday <= post_date < this_monday
 
 
 class XiaohongshuTask(BaseTask):
@@ -70,16 +81,16 @@ class XiaohongshuTask(BaseTask):
             self.status = TaskStatus.COMPLETED
             self.update_progress(100, f"采集完成，共 {len(posts)} 条帖子")
 
-            # 生成新增帖子 CSV 附件
             attachment_path = None
-            if posts:
+            report_posts = [p for p in posts if is_previous_week_post(p.post_time, start_time)]
+            if report_posts:
                 import csv
                 csv_file = DATA_DIR / f"xiaohongshu_new_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
                 csv_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
                     writer = csv.writer(f)
                     writer.writerow(['门店名称', '标题', '点赞数', '发布时间', '采集时间'])
-                    for p in posts:
+                    for p in report_posts:
                         writer.writerow([
                             p.store_name,
                             p.title,
@@ -91,8 +102,8 @@ class XiaohongshuTask(BaseTask):
 
             return TaskResult(
                 success=True,
-                message=f"采集完成，共 {len(posts)} 条帖子",
-                data={"total": len(posts)},
+                message=f"采集完成，共 {len(posts)} 条新增帖子，推送上周新增 {len(report_posts)} 条",
+                data={"total": len(posts), "weekly_total": len(report_posts)},
                 start_time=start_time,
                 end_time=datetime.now(),
                 attachment_path=attachment_path

@@ -111,7 +111,8 @@ class Notifier:
                     with open(attach_file, "rb") as f:
                         part = MIMEBase("application", "octet-stream")
                         part.set_payload(f.read())
-                    base64.encode(part)
+                    from email import encoders
+                    encoders.encode_base64(part)
                     part.add_header(
                         "Content-Disposition",
                         f"attachment; filename={attach_file.name}"
