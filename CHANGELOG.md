@@ -1,5 +1,60 @@
 # 更新日志
 
+## v0.2.1 (2026-05-25)
+
+### 安全加固
+
+- **敏感凭据迁移至环境变量**：SMTP 授权码、发件邮箱、企业微信 Webhook、京东账号密码优先从环境变量读取，回退到配置文件
+- **API 返回配置脱敏**：`GET /api/config/general` 对 `smtp_password`、`wechat_webhook` 等敏感字段返回 `********`，`PUT` 保存时跳过占位符
+- **从 Git 移除已追踪的凭据文件**：`macos/config/general.yaml`（含 SMTP 授权码）、`modules/*/config.yaml` 取消 Git 追踪
+- **补充 `.gitignore` 规则**：新增 `.env`、`*.local`、`*.tmp`、`.cache/`、`logs/`、`modules/*/config.yaml`、`.claude/` 等
+
+### 配置体系整合
+
+- **消除 `config.yaml` 与 `general.yaml` 的重复**：移除 `config.yaml` 中无效的 `notification` 块（email/wechat/level），这些配置从未被 Python 后端使用，`Notifier` 只读 `general.yaml`
+- **统一 `general.yaml` 命名风格为 snake_case**：`smtpServer` → `smtp_server`、`notifyLevel` → `notify_level` 等，与 Python 代码和 `config.yaml` 保持一致
+- **移除 Python 代码中的 camelCase 兼容**：`sender.py` 不再尝试 `smtpServer`/`smtpPort` 等旧键名
+- **修复 SMTP 端口默认值冲突**：统一为 587（STARTTLS），此前 macOS config.yaml 写 465、general.yaml 写 587、代码默认 465，三处不一致
+- **删除 Windows Config.vue 中无效的"通知设置"Tab**：该 Tab 读写 `config.yaml` 的 `notification` 块，但后端不消费，用户修改不生效；通知/邮箱配置统一在 General.vue 管理
+
+### 其他
+
+- **新增 `.env.example`**：环境变量模板，包含 `SMTP_SERVER`、`SMTP_USER`、`SMTP_PASSWORD`、`WECHAT_WEBHOOK`、`JDDJ_USERNAME`、`JDDJ_PASSWORD`
+- **`GeneralConfigModel` 补全字段**：新增 `check_interval`、`retry_count`、`task_timeout`、`log_level`、`log_retention`、`adb_address`、`emulator_type` 等
+- **京东到家模块移除硬编码默认用户名**：`task.py` 不再硬编码 `jd_sdslsmk73`，改为从环境变量 `JDDJ_USERNAME`/`JDDJ_PASSWORD` 或模块配置读取
+- **前端 General.vue 适配 snake_case**：macOS 和 Windows 的字段名从 camelCase 改为 snake_case
+
+### 配置读取优先级
+
+```
+环境变量 > general.yaml > 代码默认值
+```
+
+### 文件变更
+
+| 文件 | 变更 |
+|---|---|
+| `shared/module/notifier/sender.py` | 环境变量优先 + 移除 camelCase 兼容 |
+| `shared/module/api/routes/config.py` | 脱敏 + Schema 补全 + 移除 camelCase |
+| `macos/module/notifier/sender.py` | 同 shared |
+| `macos/module/api/routes/config.py` | 同 shared |
+| `windows/module/notifier/sender.py` | 同 shared |
+| `windows/module/api/routes/config.py` | 同 shared |
+| `macos/modules/jddj_orders/task.py` | 环境变量 + 移除硬编码用户名 |
+| `windows/modules/jddj_orders/task.py` | 同上 |
+| `macos/config/general.yaml` | snake_case + 移除凭据 |
+| `macos/config/config.yaml` | 移除 notification 块 |
+| `macos/config/tasks.yaml` | 移除硬编码用户名 |
+| `windows/config/config.yaml` | 移除 notification 块 |
+| `windows/config/tasks.yaml` | 移除硬编码用户名 |
+| `macos/packages/renderer/src/views/General.vue` | snake_case 字段名 |
+| `windows/packages/renderer/src/views/General.vue` | snake_case 字段名 |
+| `windows/packages/renderer/src/views/Config.vue` | 移除通知设置 Tab |
+| `.gitignore` | 补全规则 |
+| `macos/.gitignore` | 补全规则 |
+| `windows/.gitignore` | 补全规则 |
+| `.env.example` | 新增：环境变量模板 |
+
 ## v0.2.0 (2026-05-25)
 
 ### 关键 Bug 修复
