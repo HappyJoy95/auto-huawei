@@ -4,7 +4,10 @@ venv/
 
 # 构建产物
 packages/*/dist/
+dist/
+build/
 release/
+*.egg-info/
 
 # Python
 __pycache__/
@@ -14,6 +17,7 @@ __pycache__/
 
 # 日志
 *.log
+logs/
 
 # 系统文件
 .DS_Store
@@ -24,6 +28,7 @@ Thumbs.db
 .vscode/
 .codeartsdoer/
 *.swp
+*.swo
 
 # PID 文件
 *.pid
@@ -35,7 +40,21 @@ Thumbs.db
 # 数据文件
 data/
 
+# 环境变量（包含敏感凭据）
+.env
+.env.local
+*.local
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# AI 工具
+.claude/
+
 # 凭据和敏感配置（包含密码、token、webhook 等）
 config/general.yaml
 **/config.json
 **/modules/*/config.json
+**/modules/*/config.yaml

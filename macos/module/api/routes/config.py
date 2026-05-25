@@ -1,6 +1,7 @@
 """
 配置管理 API
 """
+import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict, Optional, List
@@ -9,6 +10,9 @@ from pathlib import Path
 from module.utils.paths import get_project_root
 
 router = APIRouter()
+
+# 敏感字段列表，API 返回时脱敏
+SENSITIVE_KEYS = {"smtp_password", "smtpPassword", "wechat_webhook"}
 
 
 class EmailTestRequest(BaseModel):
@@ -55,21 +59,46 @@ async def get_all_config():
 
 @router.get("/general")
 async def get_general_config():
-    """获取通用配置"""
+    """获取通用配置（敏感字段脱敏）"""
     config_file = CONFIG_DIR / "general.yaml"
+    config = {}
     if config_file.exists():
         with open(config_file, "r", encoding="utf-8") as f:
-            return {"success": True, "config": yaml.safe_load(f) or {}}
-    return {"success": True, "config": {}}
+            config = yaml.safe_load(f) or {}
+    # 环境变量覆盖：如果环境变量设置了敏感配置，标记为已配置
+    env_overrides = {}
+    if os.environ.get("SMTP_USER"):
+        env_overrides["smtp_user"] = os.environ["SMTP_USER"]
+    if os.environ.get("SMTP_PASSWORD"):
+        env_overrides["smtp_password"] = "********"
+    if os.environ.get("SMTP_SERVER"):
+        env_overrides["smtp_server"] = os.environ["SMTP_SERVER"]
+    if os.environ.get("SMTP_PORT"):
+        env_overrides["smtp_port"] = int(os.environ["SMTP_PORT"])
+    if os.environ.get("WECHAT_WEBHOOK"):
+        env_overrides["wechat_webhook"] = "********"
+    # 合并：环境变量优先
+    merged = {**config, **env_overrides}
+    # 脱敏：配置文件中的敏感字段用占位符替代
+    for key in SENSITIVE_KEYS:
+        if key in merged and key not in env_overrides:
+            merged[key] = "********" if merged[key] else ""
+    return {"success": True, "config": merged}
 
 
 @router.put("/general")
 async def save_general_config(config: GeneralConfigModel):
-    """保存通用配置"""
+    """保存通用配置（脱敏占位符不会被写入）"""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     config_file = CONFIG_DIR / "general.yaml"
-    # 过滤掉 None 值，只写入有效配置
-    config_data = {k: v for k, v in config.model_dump().items() if v is not None}
+    # 过滤掉 None 值和脱敏占位符，只写入有效配置
+    config_data = {}
+    for k, v in config.model_dump().items():
+        if v is None:
+            continue
+        if k in SENSITIVE_KEYS and v == "********":
+            continue
+        config_data[k] = v
     with open(config_file, "w", encoding="utf-8") as f:
         yaml.dump(config_data, f, allow_unicode=True, default_flow_style=False)
     return {"success": True}

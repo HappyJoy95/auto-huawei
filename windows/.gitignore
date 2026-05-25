@@ -10,13 +10,15 @@ data/
 node_modules/
 __pycache__/
 *.pyc
-.pyo
-.pyd
+*.pyo
+*.pyd
 venv/
+.pytest_cache/
 
 # 打包产物
 dist/
 build/
+release/
 *.egg-info/
 
 # 环境文件
@@ -43,5 +45,9 @@ logs/
 *.temp
 .cache/
 
-# Claude
+# AI 工具
 .claude/
+.codeartsdoer/
+
+# PID 文件
+*.pid

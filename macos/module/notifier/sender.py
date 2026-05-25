@@ -1,6 +1,7 @@
 """
 通知发送模块 - 支持企业微信和邮箱（可多选）
 """
+import os
 import requests
 import smtplib
 import base64
@@ -84,10 +85,11 @@ class Notifier:
         """发送邮件"""
         global_config = cls.get_global_config()
 
-        smtp_server = global_config.get("smtp_server") or global_config.get("smtpServer") or "smtp.qq.com"
-        smtp_port = int(global_config.get("smtp_port") or global_config.get("smtpPort") or 465)
-        smtp_user = global_config.get("smtp_user") or global_config.get("smtpUser") or ""
-        smtp_password = global_config.get("smtp_password") or global_config.get("smtpPassword") or ""
+        # 优先从环境变量读取敏感配置，回退到配置文件
+        smtp_server = os.environ.get("SMTP_SERVER") or global_config.get("smtp_server") or global_config.get("smtpServer") or "smtp.qq.com"
+        smtp_port = int(os.environ.get("SMTP_PORT") or global_config.get("smtp_port") or global_config.get("smtpPort") or 465)
+        smtp_user = os.environ.get("SMTP_USER") or global_config.get("smtp_user") or global_config.get("smtpUser") or ""
+        smtp_password = os.environ.get("SMTP_PASSWORD") or global_config.get("smtp_password") or global_config.get("smtpPassword") or ""
 
         if not smtp_user or not smtp_password:
             print("[Notifier] Email not configured (smtp user/password)")
@@ -217,8 +219,10 @@ class Notifier:
             return module_config["notify_target"]
 
         # 回退到全局配置
-        if notify_type == "wechat" and global_config.get("wechat_webhook"):
-            return global_config["wechat_webhook"]
+        if notify_type == "wechat":
+            webhook = os.environ.get("WECHAT_WEBHOOK") or global_config.get("wechat_webhook")
+            if webhook:
+                return webhook
         if notify_type == "email":
             return global_config.get("email", "")
 

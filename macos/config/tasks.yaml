@@ -36,8 +36,8 @@ jddj_orders:
   name: "京东到家订单监控"
   enabled: false
   interval: 10                   # 每10分钟检查
-  # 账号配置
-  username: "jd_sdslsmk73"
+  # 账号配置（建议通过环境变量 JDDJ_USERNAME / JDDJ_PASSWORD 设置）
+  username: ""
   password: ""
   # 浏览器设置
   headless: false                # 是否显示浏览器窗口

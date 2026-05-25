@@ -1,6 +1,7 @@
 """
 京东到家订单监控任务
 """
+import os
 from module.tasks.base import BaseTask, TaskResult, TaskStatus
 from module.config.config import DATA_DIR
 from pathlib import Path
@@ -27,8 +28,8 @@ class JddjOrdersTask(BaseTask):
             cookies_file = JDDJ_DATA_DIR / "cookies.json"
             output_file = JDDJ_DATA_DIR / "pending_orders.json"
 
-            username = self.config.get("username", "jd_sdslsmk73")
-            password = self.config.get("password", "")
+            username = os.environ.get("JDDJ_USERNAME") or self.config.get("username", "")
+            password = os.environ.get("JDDJ_PASSWORD") or self.config.get("password", "")
             target_status = self.config.get("target_status", ["待接单", "待打印"])
             headless = self.config.get("headless", True)
 
