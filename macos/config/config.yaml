@@ -5,19 +5,3 @@ browser:
   headless: true          # 无头模式
   timeout: 60000          # 超时时间（毫秒）
   download_path: "./data/downloads"  # 下载路径
-
-# ===== 通知配置 =====
-notification:
-  # 通知级别: all(全部) / error(仅错误) / none(不通知)
-  level: "all"
-
-  # 邮箱发件配置（收件人在模块设置中配置）
-  email:
-    smtp_server: "smtp.qq.com"
-    smtp_port: 465
-    sender_email: ""
-    sender_password: ""
-
-  # 企业微信（可在模块设置中覆盖）
-  wechat:
-    webhook_url: ""

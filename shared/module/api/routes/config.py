@@ -12,7 +12,7 @@ from module.utils.paths import get_project_root
 router = APIRouter()
 
 # 敏感字段列表，API 返回时脱敏
-SENSITIVE_KEYS = {"smtp_password", "smtpPassword", "wechat_webhook"}
+SENSITIVE_KEYS = {"smtp_password", "wechat_webhook"}
 
 
 class EmailTestRequest(BaseModel):
@@ -27,9 +27,11 @@ class ConfigUpdateRequest(BaseModel):
 
 # 通用配置白名单字段
 GENERAL_CONFIG_ALLOWED_KEYS = {
-    "notify_level", "notify_type", "wechat_webhook", "headless",
+    "check_interval", "retry_count", "task_timeout", "concurrency",
+    "adb_address", "emulator_type", "headless",
+    "notify_level", "notify_type", "wechat_webhook",
     "smtp_server", "smtp_port", "smtp_user", "smtp_password",
-    "receiver_email", "adb_port", "browser"
+    "receiver_email", "log_level", "log_retention", "browser"
 }
 
 
@@ -37,16 +39,23 @@ class GeneralConfigModel(BaseModel):
     """通用配置 Schema - 仅允许已知字段"""
     model_config = {"extra": "allow"}
 
+    check_interval: Optional[int] = None
+    retry_count: Optional[int] = None
+    task_timeout: Optional[int] = None
+    concurrency: Optional[int] = None
+    adb_address: Optional[str] = None
+    emulator_type: Optional[str] = None
+    headless: Optional[bool] = None
     notify_level: Optional[str] = None
     notify_type: Optional[str] = None
     wechat_webhook: Optional[str] = None
-    headless: Optional[bool] = None
     smtp_server: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     receiver_email: Optional[str] = None
-    adb_port: Optional[str] = None
+    log_level: Optional[str] = None
+    log_retention: Optional[int] = None
     browser: Optional[str] = None
 
 
@@ -129,7 +138,7 @@ async def test_email(request: EmailTestRequest | None = None):
     from datetime import datetime
 
     config = Notifier.get_global_config()
-    smtp_user = config.get("smtp_user") or config.get("smtpUser") or ""
+    smtp_user = os.environ.get("SMTP_USER") or config.get("smtp_user", "")
     to_email = request.to_email if request else smtp_user
 
     if not to_email:

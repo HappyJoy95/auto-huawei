@@ -15,21 +15,21 @@
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="检查间隔">
-              <a-input-number v-model="config.checkInterval" :min="1" :max="60">
+              <a-input-number v-model="config.check_interval" :min="1" :max="60">
                 <template #suffix>秒</template>
               </a-input-number>
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="重试次数">
-              <a-input-number v-model="config.retryCount" :min="0" :max="10" />
+              <a-input-number v-model="config.retry_count" :min="0" :max="10" />
             </a-form-item>
           </a-col>
         </a-row>
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="任务超时">
-              <a-input-number v-model="config.taskTimeout" :min="1" :max="120">
+              <a-input-number v-model="config.task_timeout" :min="1" :max="120">
                 <template #suffix>分钟</template>
               </a-input-number>
             </a-form-item>
@@ -45,7 +45,7 @@
       <!-- 通知设置 -->
       <a-card title="通知设置" class="config-card">
         <a-form-item label="通知级别">
-          <a-select v-model="config.notifyLevel" style="width: 200px">
+          <a-select v-model="config.notify_level" style="width: 200px">
             <a-option value="all">全部通知</a-option>
             <a-option value="error">仅错误</a-option>
             <a-option value="none">不通知</a-option>
@@ -59,24 +59,24 @@
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="SMTP 服务器">
-              <a-input v-model="config.smtpServer" placeholder="smtp.qq.com" />
+              <a-input v-model="config.smtp_server" placeholder="smtp.qq.com" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="SMTP 端口">
-              <a-input-number v-model="config.smtpPort" :min="1" :max="65535" style="width: 100%" />
+              <a-input-number v-model="config.smtp_port" :min="1" :max="65535" style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="发件邮箱">
-              <a-input v-model="config.smtpUser" placeholder="your@email.com" />
+              <a-input v-model="config.smtp_user" placeholder="your@email.com" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="授权码">
-              <a-input-password v-model="config.smtpPassword" placeholder="邮箱授权码" />
+              <a-input-password v-model="config.smtp_password" placeholder="邮箱授权码" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -98,7 +98,7 @@
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="日志级别">
-              <a-select v-model="config.logLevel">
+              <a-select v-model="config.log_level">
                 <a-option value="debug">Debug</a-option>
                 <a-option value="info">Info</a-option>
                 <a-option value="warning">Warning</a-option>
@@ -108,7 +108,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="保留天数">
-              <a-input-number v-model="config.logRetention" :min="1" :max="30">
+              <a-input-number v-model="config.log_retention" :min="1" :max="30">
                 <template #suffix>天</template>
               </a-input-number>
             </a-form-item>
@@ -137,17 +137,17 @@ const testEmailResult = ref('')
 const testEmailSuccess = ref(false)
 
 const config = reactive({
-  checkInterval: 10,
-  retryCount: 3,
-  taskTimeout: 30,
+  check_interval: 10,
+  retry_count: 3,
+  task_timeout: 30,
   concurrency: 1,
-  notifyLevel: 'all',
-  smtpServer: 'smtp.qq.com',
-  smtpPort: 465,
-  smtpUser: '',
-  smtpPassword: '',
-  logLevel: 'info',
-  logRetention: 7
+  notify_level: 'all',
+  smtp_server: 'smtp.qq.com',
+  smtp_port: 587,
+  smtp_user: '',
+  smtp_password: '',
+  log_level: 'info',
+  log_retention: 7
 })
 
 async function loadConfig() {

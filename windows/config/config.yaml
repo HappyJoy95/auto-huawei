@@ -9,15 +9,3 @@ browser:
   headless: true          # 无头模式
   timeout: 60000          # 超时时间（毫秒）
   download_path: "./data/downloads"  # 下载路径
-
-# ===== 通知配置 =====
-notification:
-  email:
-    smtp_server: "smtp.qq.com"
-    smtp_port: 587
-    sender_email: ""
-    sender_password: ""
-    receiver_email: ""
-
-  wechat:
-    webhook_url: ""

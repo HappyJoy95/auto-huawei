@@ -79,49 +79,6 @@
         </a-card>
       </a-tab-pane>
 
-      <!-- 通知配置 -->
-      <a-tab-pane key="notification" title="通知设置">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-card title="企业微信">
-              <a-form :model="wechatConfig" layout="vertical">
-                <a-form-item label="Webhook URL">
-                  <a-input v-model="wechatConfig.webhook_url" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx" />
-                </a-form-item>
-                <a-form-item>
-                  <a-button type="primary" @click="saveWechatConfig" :loading="saving">保存</a-button>
-                  <a-button style="margin-left: 8px" @click="testWechat">测试发送</a-button>
-                </a-form-item>
-              </a-form>
-            </a-card>
-          </a-col>
-          <a-col :span="12">
-            <a-card title="邮件通知">
-              <a-form :model="emailConfig" layout="vertical">
-                <a-form-item label="SMTP 服务器">
-                  <a-input v-model="emailConfig.smtp_server" placeholder="smtp.qq.com" />
-                </a-form-item>
-                <a-form-item label="端口">
-                  <a-input-number v-model="emailConfig.smtp_port" :min="1" :max="65535" />
-                </a-form-item>
-                <a-form-item label="发件邮箱">
-                  <a-input v-model="emailConfig.sender_email" placeholder="xxx@qq.com" />
-                </a-form-item>
-                <a-form-item label="授权码">
-                  <a-input-password v-model="emailConfig.sender_password" placeholder="邮箱授权码" />
-                </a-form-item>
-                <a-form-item label="收件邮箱">
-                  <a-input v-model="emailConfig.receiver_email" placeholder="xxx@qq.com" />
-                </a-form-item>
-                <a-form-item>
-                  <a-button type="primary" @click="saveEmailConfig" :loading="saving">保存</a-button>
-                </a-form-item>
-              </a-form>
-            </a-card>
-          </a-col>
-        </a-row>
-      </a-tab-pane>
-
       <!-- 模拟器配置 -->
       <a-tab-pane key="emulator" title="模拟器">
         <a-card title="MuMu 模拟器配置">
@@ -184,16 +141,6 @@ const jddjConfig = reactive({
   target_status: ['待接单', '待打印']
 })
 
-// 通知配置
-const wechatConfig = reactive({ webhook_url: '' })
-const emailConfig = reactive({
-  smtp_server: 'smtp.qq.com',
-  smtp_port: 587,
-  sender_email: '',
-  sender_password: '',
-  receiver_email: ''
-})
-
 // 模拟器配置
 const emulatorConfig = reactive({ adb_port: '127.0.0.1:16448' })
 
@@ -213,14 +160,6 @@ async function loadAllConfig() {
     // 加载京东配置
     if (config.tasks?.jddj_orders) {
       Object.assign(jddjConfig, config.tasks.jddj_orders)
-    }
-
-    // 加载通知配置
-    if (config.notification?.wechat) {
-      Object.assign(wechatConfig, config.notification.wechat)
-    }
-    if (config.notification?.email) {
-      Object.assign(emailConfig, config.notification.email)
     }
 
     // 加载模拟器配置
@@ -287,35 +226,6 @@ async function saveJddjConfig() {
   } finally {
     saving.value = false
   }
-}
-
-// 通知配置
-async function saveWechatConfig() {
-  saving.value = true
-  try {
-    await window.api.config.set('notification.wechat', wechatConfig)
-    Message.success('保存成功')
-  } catch (e) {
-    Message.error('保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-async function saveEmailConfig() {
-  saving.value = true
-  try {
-    await window.api.config.set('notification.email', emailConfig)
-    Message.success('保存成功')
-  } catch (e) {
-    Message.error('保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-async function testWechat() {
-  Message.info('测试发送功能开发中...')
 }
 
 // 模拟器配置

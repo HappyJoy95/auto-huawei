@@ -86,10 +86,10 @@ class Notifier:
         global_config = cls.get_global_config()
 
         # 优先从环境变量读取敏感配置，回退到配置文件
-        smtp_server = os.environ.get("SMTP_SERVER") or global_config.get("smtp_server") or global_config.get("smtpServer") or "smtp.qq.com"
-        smtp_port = int(os.environ.get("SMTP_PORT") or global_config.get("smtp_port") or global_config.get("smtpPort") or 465)
-        smtp_user = os.environ.get("SMTP_USER") or global_config.get("smtp_user") or global_config.get("smtpUser") or ""
-        smtp_password = os.environ.get("SMTP_PASSWORD") or global_config.get("smtp_password") or global_config.get("smtpPassword") or ""
+        smtp_server = os.environ.get("SMTP_SERVER") or global_config.get("smtp_server", "smtp.qq.com")
+        smtp_port = int(os.environ.get("SMTP_PORT") or global_config.get("smtp_port", 587))
+        smtp_user = os.environ.get("SMTP_USER") or global_config.get("smtp_user", "")
+        smtp_password = os.environ.get("SMTP_PASSWORD") or global_config.get("smtp_password", "")
 
         if not smtp_user or not smtp_password:
             print("[Notifier] Email not configured (smtp user/password)")
