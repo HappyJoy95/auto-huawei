@@ -298,6 +298,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import * as api from '../services/api'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import { useModuleStore } from '../stores/module'
 import { Message } from '@arco-design/web-vue'
@@ -540,10 +541,7 @@ async function runTest() {
   testResult.value = null
 
   try {
-    const response = await fetch(`http://127.0.0.1:5001/api/scheduler/task/${moduleName.value}/run-now?mode=test`, {
-      method: 'POST'
-    })
-    const result = await response.json()
+    const result = await api.runTaskNow(moduleName.value, 'test')
 
     if (result.success) {
       Message.success('任务已加入执行队列')
@@ -552,7 +550,7 @@ async function runTest() {
       testResult.value = { success: false, message: result.message || '启动失败' }
     }
   } catch (e) {
-    testResult.value = { success: false, message: '连接后端失败: ' + e }
+    testResult.value = { success: false, message: '连接后端失败: ' + (e instanceof Error ? e.message : String(e)) }
   } finally {
     testing.value = false
   }

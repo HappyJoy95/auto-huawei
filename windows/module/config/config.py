@@ -5,14 +5,15 @@ import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional
 from copy import deepcopy
+from module.utils.paths import get_project_root
 
 # 配置文件路径
-CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+CONFIG_DIR = get_project_root() / "config"
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
 TASKS_FILE = CONFIG_DIR / "tasks.yaml"
 
 # 数据目录
-DATA_DIR = Path(__file__).parent.parent.parent / "data"
+DATA_DIR = get_project_root() / "data"
 
 
 class Config:

@@ -5,9 +5,10 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from croniter import croniter
+from module.utils.scheduler_utils import calculate_next_run
+from module.utils.paths import get_project_root
 
-MODULES_DIR = Path(__file__).parent.parent.parent / "modules"
+MODULES_DIR = get_project_root() / "modules"
 
 
 class ModuleManager:
@@ -80,110 +81,7 @@ class ModuleManager:
 
     def _calculate_next_run(self, scheduler_config: Dict[str, Any]) -> Optional[datetime]:
         """计算下次运行时间"""
-        now = datetime.now()
-
-        # 检查是否有定时配置
-        has_schedule = scheduler_config.get("interval") or scheduler_config.get("schedule")
-
-        # 手动设置的时间（没有其他定时配置时使用）
-        if not has_schedule:
-            manual_time = scheduler_config.get("manual_time") or "01-01 00:00:00"
-            try:
-                parts = manual_time.split()
-                if len(parts) == 2:
-                    date_parts = parts[0].split("-")
-                    time_parts = parts[1].split(":")
-
-                    month = int(date_parts[0])
-                    day = int(date_parts[1])
-                    hour = int(time_parts[0])
-                    minute = int(time_parts[1])
-                    second = int(time_parts[2]) if len(time_parts) > 2 else 0
-
-                    next_run = now.replace(month=month, day=day, hour=hour, minute=minute, second=second, microsecond=0)
-
-                    if next_run > now:
-                        return next_run
-            except Exception:
-                pass
-
-        # 间隔执行
-        interval = scheduler_config.get("interval")
-        if interval:
-            start_time = scheduler_config.get("interval_start", "00:00")
-            end_time = scheduler_config.get("interval_end", "23:59")
-            days = scheduler_config.get("interval_days", [1, 2, 3, 4, 5])
-
-            # 检查今天是否在生效日期内
-            today_dow = now.weekday()  # 0=周一, 6=周日
-            # 转换: 前端用 1=周一, 0=周日; Python weekday 用 0=周一, 6=周日
-            py_to_frontend = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
-            if py_to_frontend[today_dow] not in days:
-                # 找下一个生效日期
-                for i in range(1, 8):
-                    next_day = (today_dow + i) % 7
-                    if py_to_frontend[next_day] in days:
-                        # 返回下一个生效日期的开始时间
-                        h, m = map(int, start_time.split(":"))
-                        next_run = now.replace(hour=h, minute=m, second=0, microsecond=0)
-                        from datetime import timedelta
-                        next_run += timedelta(days=i)
-                        return next_run
-                return None
-
-            # 检查当前时间是否在生效时间段内
-            h, m = map(int, start_time.split(":"))
-            start_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
-            h, m = map(int, end_time.split(":"))
-            end_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
-
-            if now < start_dt:
-                return start_dt
-            elif now > end_dt:
-                # 今天已过，找下一个生效日期
-                for i in range(1, 8):
-                    next_day = (today_dow + i) % 7
-                    if py_to_frontend[next_day] in days:
-                        h, m = map(int, start_time.split(":"))
-                        from datetime import timedelta
-                        next_run = now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=i)
-                        return next_run
-                return None
-            else:
-                # 在生效时间段内，计算下一个间隔时间
-                from datetime import timedelta
-                minutes_since_start = (now - start_dt).total_seconds() / 60
-                intervals_passed = int(minutes_since_start / interval)
-                next_run = start_dt + timedelta(minutes=(intervals_passed + 1) * interval)
-                if next_run > end_dt:
-                    # 超出今天的时间范围
-                    for i in range(1, 8):
-                        next_day = (today_dow + i) % 7
-                        if py_to_frontend[next_day] in days:
-                            h, m = map(int, start_time.split(":"))
-                            next_run = now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=i)
-                            return next_run
-                    return None
-                return next_run
-
-        # Cron 表达式
-        schedule = scheduler_config.get("schedule")
-        if schedule:
-            schedules = schedule if isinstance(schedule, list) else [schedule]
-            next_runs = []
-
-            for sch in schedules:
-                if isinstance(sch, str):
-                    try:
-                        cron = croniter(sch, now)
-                        next_runs.append(cron.get_next(datetime))
-                    except Exception:
-                        pass
-
-            if next_runs:
-                return min(next_runs)
-
-        return None
+        return calculate_next_run(scheduler_config)
 
     def get_modules_list(self) -> List[Dict[str, Any]]:
         """获取所有模块列表"""
@@ -245,8 +143,8 @@ class ModuleManager:
         module_dir = MODULES_DIR / module_name
         config_file = module_dir / "config.yaml"
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+        from module.utils.file_utils import atomic_write
+        atomic_write(config_file, yaml.dump(config, allow_unicode=True, default_flow_style=False))
 
         self.modules[module_name]["scheduler_config"] = config
         return True
@@ -259,8 +157,8 @@ class ModuleManager:
         module_dir = MODULES_DIR / module_name
         config_file = module_dir / "config.json"
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(config, f, ensure_ascii=False, indent=2)
+        from module.utils.file_utils import atomic_write
+        atomic_write(config_file, json.dumps(config, ensure_ascii=False, indent=2))
 
         self.modules[module_name]["module_config"] = config
         return True

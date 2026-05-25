@@ -128,6 +128,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import * as api from '../services/api'
 import { Message } from '@arco-design/web-vue'
 
 const saving = ref(false)
@@ -151,8 +152,7 @@ const config = reactive({
 
 async function loadConfig() {
   try {
-    const response = await fetch('http://127.0.0.1:5001/api/config/general')
-    const result = await response.json()
+    const result = await api.getGeneralConfig()
     if (result?.success && result.config) {
       Object.assign(config, result.config)
     }
@@ -164,12 +164,7 @@ async function loadConfig() {
 async function saveConfig() {
   saving.value = true
   try {
-    const response = await fetch('http://127.0.0.1:5001/api/config/general', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
-    })
-    const result = await response.json()
+    const result = await api.saveGeneralConfig(config)
     if (result?.success) {
       Message.success('保存成功')
     } else {
@@ -186,10 +181,7 @@ async function testEmail() {
   testingEmail.value = true
   testEmailResult.value = ''
   try {
-    const response = await fetch('http://127.0.0.1:5001/api/config/test-email', {
-      method: 'POST'
-    })
-    const result = await response.json()
+    const result = await api.testEmail()
     if (result?.success) {
       testEmailSuccess.value = true
       testEmailResult.value = result.message || '测试邮件发送成功'

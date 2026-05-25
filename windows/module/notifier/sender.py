@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import yaml
 from pathlib import Path
+from module.utils.paths import get_project_root
 
 
 class Notifier:
@@ -19,7 +20,7 @@ class Notifier:
     @classmethod
     def get_global_config(cls) -> Dict[str, Any]:
         """获取全局配置"""
-        config_file = Path(__file__).parent.parent.parent / "config" / "general.yaml"
+        config_file = get_project_root() / "config" / "general.yaml"
         if config_file.exists():
             with open(config_file, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}

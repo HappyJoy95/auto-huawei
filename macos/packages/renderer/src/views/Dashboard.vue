@@ -129,6 +129,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useModuleStore } from '../stores/module'
+import * as api from '../services/api'
 import {
   IconPlayArrow,
   IconPause,
@@ -196,13 +197,10 @@ function getNextRun(task: any): string {
 
 async function fetchSchedulerStatus() {
   try {
-    const [statusRes, logsRes] = await Promise.all([
-      fetch('http://127.0.0.1:5001/api/scheduler/status'),
-      fetch('http://127.0.0.1:5001/api/logs?limit=100')
+    const [statusData, logsData] = await Promise.all([
+      api.getSchedulerStatus(),
+      api.getLogs(100)
     ])
-
-    const statusData = await statusRes.json()
-    const logsData = await logsRes.json()
 
     schedulerRunning.value = statusData.running
     waitingList.value = statusData.waiting || []
@@ -236,7 +234,7 @@ let pollTimer: number | null = null
 
 function startPolling() {
   fetchSchedulerStatus()
-  pollTimer = window.setInterval(fetchSchedulerStatus, 1000)
+  pollTimer = window.setInterval(fetchSchedulerStatus, 3000)
 }
 
 function stopPolling() {

@@ -33,3 +33,8 @@ Thumbs.db
 
 # 数据文件
 data/
+
+# 凭据和敏感配置（包含密码、token、webhook 等）
+config/general.yaml
+**/config.json
+**/modules/*/config.json

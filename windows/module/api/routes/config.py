@@ -3,9 +3,10 @@
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict
+from typing import Any, Dict, Optional, List
 import yaml
 from pathlib import Path
+from module.utils.paths import get_project_root
 
 router = APIRouter()
 
@@ -13,11 +14,36 @@ router = APIRouter()
 class EmailTestRequest(BaseModel):
     to_email: str
 
-CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config"
+CONFIG_DIR = get_project_root() / "config"
 
 
 class ConfigUpdateRequest(BaseModel):
     value: Any
+
+
+# 通用配置白名单字段
+GENERAL_CONFIG_ALLOWED_KEYS = {
+    "notify_level", "notify_type", "wechat_webhook", "headless",
+    "smtp_server", "smtp_port", "smtp_user", "smtp_password",
+    "receiver_email", "adb_port", "browser"
+}
+
+
+class GeneralConfigModel(BaseModel):
+    """通用配置 Schema - 仅允许已知字段"""
+    model_config = {"extra": "allow"}
+
+    notify_level: Optional[str] = None
+    notify_type: Optional[str] = None
+    wechat_webhook: Optional[str] = None
+    headless: Optional[bool] = None
+    smtp_server: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    receiver_email: Optional[str] = None
+    adb_port: Optional[str] = None
+    browser: Optional[str] = None
 
 
 @router.get("")
@@ -38,12 +64,14 @@ async def get_general_config():
 
 
 @router.put("/general")
-async def save_general_config(config: Dict[str, Any]):
+async def save_general_config(config: GeneralConfigModel):
     """保存通用配置"""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     config_file = CONFIG_DIR / "general.yaml"
+    # 过滤掉 None 值，只写入有效配置
+    config_data = {k: v for k, v in config.model_dump().items() if v is not None}
     with open(config_file, "w", encoding="utf-8") as f:
-        yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+        yaml.dump(config_data, f, allow_unicode=True, default_flow_style=False)
     return {"success": True}
 
 

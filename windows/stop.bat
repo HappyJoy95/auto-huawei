@@ -11,12 +11,19 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5173 ^| findstr LISTENING') 
     taskkill /F /PID %%a >nul 2>&1
 )
 
-echo Stopping Electron processes...
-taskkill /F /IM electron.exe >nul 2>&1
-
-echo Stopping Python processes on port 5001...
+echo Stopping Python backend on port 5001...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5001 ^| findstr LISTENING') do (
     taskkill /F /PID %%a >nul 2>&1
+)
+
+:: Stop Electron only if it was launched by this project (via PID file)
+if exist .app.pid (
+    set /p APP_PID=<.app.pid
+    taskkill /F /PID %APP_PID% >nul 2>&1
+    del .app.pid >nul 2>&1
+    echo Stopped Electron (PID %APP_PID%)
+) else (
+    echo No .app.pid found, skipping Electron stop
 )
 
 echo.

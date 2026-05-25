@@ -35,7 +35,7 @@ echo "启动应用..."
 export NODE_ENV=production
 ./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron . &
 APP_PID=$!
-echo "前端 PID: $FRONTEND_PID"
+echo "应用 PID: $APP_PID"
 
 echo ""
 echo "========================================"

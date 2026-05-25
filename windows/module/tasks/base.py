@@ -92,8 +92,9 @@ class BaseTask(ABC):
         return self._stop_event.is_set()
 
     def check_paused(self):
-        """检查暂停状态，如果暂停则阻塞"""
-        self._pause_event.wait()
+        """检查暂停状态，如果暂停则阻塞直到恢复或停止"""
+        while self._pause_event.is_set() and not self._stop_event.is_set():
+            self._pause_event.wait(timeout=0.5)
 
     def set_status_callback(self, callback: Callable):
         """设置状态更新回调"""

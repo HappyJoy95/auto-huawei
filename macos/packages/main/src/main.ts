@@ -1,11 +1,20 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import axios from 'axios'
 import { PythonManager } from './python'
 
 let mainWindow: BrowserWindow | null = null
 let pythonManager: PythonManager | null = null
 
 const API_BASE = 'http://localhost:5001/api'
+
+// 参数校验工具
+const SAFE_NAME_RE = /^[a-zA-Z0-9_-]+$/
+function validateSafeName(name: string, label: string): void {
+  if (!name || typeof name !== 'string' || !SAFE_NAME_RE.test(name)) {
+    throw new Error(`Invalid ${label}: ${name}`)
+  }
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -43,46 +52,58 @@ async function startPython() {
 function setupIpc() {
   // 任务管理
   ipcMain.handle('task:list', async () => {
-    const axios = require('axios')
     const response = await axios.get(`${API_BASE}/tasks`)
     return response.data
   })
 
   ipcMain.handle('task:run', async (_, taskId: string) => {
-    const axios = require('axios')
+    validateSafeName(taskId, 'taskId')
     const response = await axios.post(`${API_BASE}/tasks/${taskId}/run`)
     return response.data
   })
 
   ipcMain.handle('task:stop', async (_, taskId: string) => {
-    const axios = require('axios')
+    validateSafeName(taskId, 'taskId')
     const response = await axios.post(`${API_BASE}/tasks/${taskId}/stop`)
     return response.data
   })
 
   ipcMain.handle('task:start', async (_, taskId: string) => {
-    const axios = require('axios')
+    validateSafeName(taskId, 'taskId')
     const response = await axios.post(`${API_BASE}/tasks/${taskId}/start`)
     return response.data
   })
 
   // 配置管理
   ipcMain.handle('config:get', async (_, key?: string) => {
-    const axios = require('axios')
+    if (key && typeof key === 'string') {
+      // 只允许安全字符和点号（用于嵌套 key 如 notification.email）
+      if (!/^[a-zA-Z0-9_.-]+$/.test(key)) {
+        throw new Error(`Invalid config key: ${key}`)
+      }
+    }
     const url = key ? `${API_BASE}/config/${key}` : `${API_BASE}/config`
     const response = await axios.get(url)
     return response.data
   })
 
   ipcMain.handle('config:set', async (_, key: string, value: any) => {
-    const axios = require('axios')
+    if (!key || typeof key !== 'string' || !/^[a-zA-Z0-9_.-]+$/.test(key)) {
+      throw new Error(`Invalid config key: ${key}`)
+    }
+    if (value === undefined) {
+      throw new Error('Config value is required')
+    }
     const response = await axios.put(`${API_BASE}/config/${key}`, { value })
     return response.data
   })
 
   // 数据获取（动态）
   ipcMain.handle('data:get', async (_, moduleName: string, fileName?: string) => {
-    const axios = require('axios')
+    validateSafeName(moduleName, 'moduleName')
+    if (fileName) {
+      validateSafeName(fileName, 'fileName')
+    }
     const url = fileName
       ? `${API_BASE}/data/${moduleName}/${fileName}`
       : `${API_BASE}/data/${moduleName}`
@@ -92,19 +113,21 @@ function setupIpc() {
 
   // 模块管理
   ipcMain.handle('module:list', async () => {
-    const axios = require('axios')
     const response = await axios.get(`${API_BASE}/modules`)
     return response.data
   })
 
   ipcMain.handle('module:config:get', async (_, moduleName: string) => {
-    const axios = require('axios')
+    validateSafeName(moduleName, 'moduleName')
     const response = await axios.get(`${API_BASE}/modules/${moduleName}/configs`)
     return response.data
   })
 
   ipcMain.handle('module:config:save', async (_, moduleName: string, config: any) => {
-    const axios = require('axios')
+    validateSafeName(moduleName, 'moduleName')
+    if (!config || typeof config !== 'object') {
+      throw new Error('Config must be an object')
+    }
     // 保存调度器配置
     await axios.put(`${API_BASE}/modules/${moduleName}/scheduler-config`, config.scheduler)
     // 保存模块配置
@@ -113,7 +136,7 @@ function setupIpc() {
   })
 
   ipcMain.handle('module:style:get', async (_, moduleName: string) => {
-    const axios = require('axios')
+    validateSafeName(moduleName, 'moduleName')
     const response = await axios.get(`${API_BASE}/modules/${moduleName}/style`)
     return response.data
   })
@@ -135,6 +158,11 @@ app.on('window-all-closed', () => {
     pythonManager?.stop()
     app.quit()
   }
+})
+
+// 确保 Python 进程在退出时被终止
+app.on('before-quit', () => {
+  pythonManager?.stop()
 })
 
 app.on('activate', () => {

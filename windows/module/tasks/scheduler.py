@@ -15,6 +15,7 @@ from module.tasks.base import BaseTask, TaskStatus, TaskInfo
 from module.tasks.loader import TaskLoader
 from module.core.module_manager import module_manager
 from module.notifier.sender import Notifier
+from module.utils.scheduler_utils import calculate_next_run, parse_manual_time
 
 # 全局日志队列
 _log_queue: deque = deque(maxlen=500)
@@ -132,10 +133,12 @@ class TaskQueueScheduler:
 
     def reload_task(self, module_name: str):
         """重新加载某个模块的调度"""
-        with self._lock:
-            module_manager.load_module(module_name)
-            module_info = module_manager.modules.get(module_name)
+        # 先在锁外执行 I/O 操作（读取配置文件）
+        module_manager.load_module(module_name)
+        module_info = module_manager.modules.get(module_name)
 
+        # 再在锁内更新调度器状态
+        with self._lock:
             if not module_info or not module_info.get("has_task"):
                 # 从所有队列移除
                 self.waiting_tasks.pop(module_name, None)
@@ -268,88 +271,7 @@ class TaskQueueScheduler:
 
     def _calculate_next_run(self, config: Dict) -> Optional[datetime]:
         """计算下次运行时间"""
-        now = datetime.now()
-
-        # 检查是否有定时配置（interval 或 schedule）
-        has_schedule = config.get("interval") or config.get("schedule")
-
-        # 手动设置的时间（没有其他定时配置时使用）
-        if not has_schedule:
-            manual_time = config.get("manual_time") or "01-01 00:00:00"
-            try:
-                # 格式: mm-dd HH:MM:SS
-                parts = manual_time.split()
-                if len(parts) == 2:
-                    date_parts = parts[0].split("-")
-                    time_parts = parts[1].split(":")
-
-                    month = int(date_parts[0])
-                    day = int(date_parts[1])
-                    hour = int(time_parts[0])
-                    minute = int(time_parts[1])
-                    second = int(time_parts[2]) if len(time_parts) > 2 else 0
-
-                    next_run = now.replace(month=month, day=day, hour=hour, minute=minute, second=second, microsecond=0)
-
-                    if next_run > now:
-                        return next_run
-            except Exception:
-                pass
-
-        # 间隔执行
-        interval = config.get("interval")
-        if interval:
-            start_time = config.get("interval_start", "00:00")
-            end_time = config.get("interval_end", "23:59")
-            days = config.get("interval_days", [1, 2, 3, 4, 5])
-
-            # 检查今天是否在生效日期内
-            today_dow = now.weekday()
-            py_to_frontend = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
-
-            if py_to_frontend[today_dow] in days:
-                h, m = map(int, start_time.split(":"))
-                start_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
-                h, m = map(int, end_time.split(":"))
-                end_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
-
-                if now < start_dt:
-                    return start_dt
-                elif now <= end_dt:
-                    minutes_since_start = (now - start_dt).total_seconds() / 60
-                    intervals_passed = int(minutes_since_start / interval)
-                    next_run = start_dt + timedelta(minutes=(intervals_passed + 1) * interval)
-                    if next_run <= end_dt:
-                        return next_run
-
-            # 找下一个生效日期
-            for i in range(1, 8):
-                next_day = (today_dow + i) % 7
-                if py_to_frontend[next_day] in days:
-                    h, m = map(int, start_time.split(":"))
-                    next_run = now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=i)
-                    return next_run
-
-            return None
-
-        # Cron 表达式
-        schedule = config.get("schedule")
-        if schedule:
-            schedules = schedule if isinstance(schedule, list) else [schedule]
-            next_runs = []
-
-            for sch in schedules:
-                if isinstance(sch, str):
-                    try:
-                        cron = croniter(sch, now)
-                        next_runs.append(cron.get_next(datetime))
-                    except Exception:
-                        pass
-
-            if next_runs:
-                return min(next_runs)
-
-        return None
+        return calculate_next_run(config, log_warning=lambda msg, mod: add_log("WARNING", msg, mod))
 
     def get_status(self) -> Dict:
         """获取调度器状态"""
@@ -370,16 +292,17 @@ class TaskQueueScheduler:
 
     def get_task_status(self, module_name: str) -> Dict:
         """获取单个任务状态"""
-        status = "idle"
-        next_run = None
+        with self._lock:
+            status = "idle"
+            next_run = None
 
-        if module_name in self.running_tasks:
-            status = "running"
-        elif module_name in self.queue_tasks:
-            status = "queued"
-        elif module_name in self.waiting_tasks:
-            status = "waiting"
-            next_run = self.waiting_tasks[module_name].isoformat()
+            if module_name in self.running_tasks:
+                status = "running"
+            elif module_name in self.queue_tasks:
+                status = "queued"
+            elif module_name in self.waiting_tasks:
+                status = "waiting"
+                next_run = self.waiting_tasks[module_name].isoformat()
 
         task = self.task_instances.get(module_name)
         task_info = None
@@ -426,26 +349,13 @@ class TaskQueueScheduler:
             self.task_configs[module_name]["scheduler"]["manual_time"] = time_str
 
             # 解析时间
-            try:
-                now = datetime.now()
-                parts = time_str.split()
-                date_parts = parts[0].split("-")
-                time_parts = parts[1].split(":")
-
-                month = int(date_parts[0])
-                day = int(date_parts[1])
-                hour = int(time_parts[0])
-                minute = int(time_parts[1])
-                second = int(time_parts[2]) if len(time_parts) > 2 else 0
-
-                next_run = now.replace(month=month, day=day, hour=hour, minute=minute, second=second, microsecond=0)
-
-                if next_run > now:
-                    self.waiting_tasks[module_name] = next_run
-                    # 保存到配置文件
-                    module_manager.modules[module_name]["scheduler_config"]["manual_time"] = time_str
-            except Exception:
-                pass
+            next_run = parse_manual_time(time_str)
+            if next_run:
+                self.waiting_tasks[module_name] = next_run
+                # 保存到配置文件
+                module_manager.modules[module_name]["scheduler_config"]["manual_time"] = time_str
+            else:
+                add_log("WARNING", f"手动时间设置失败: {time_str}", module_name)
 
 
 # 全局实例
