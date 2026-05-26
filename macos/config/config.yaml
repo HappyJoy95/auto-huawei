@@ -1,7 +1,0 @@
-# 自动化控制器全局配置 (macOS 版本)
-
-# ===== 浏览器配置 =====
-browser:
-  headless: true          # 无头模式
-  timeout: 60000          # 超时时间（毫秒）
-  download_path: "./data/downloads"  # 下载路径
