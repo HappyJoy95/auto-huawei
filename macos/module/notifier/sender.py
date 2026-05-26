@@ -142,7 +142,8 @@ class Notifier:
 
     @classmethod
     def notify_task_result(cls, module_name: str, module_display_name: str,
-                           module_config: Dict[str, Any], result: Dict[str, Any]):
+                           module_config: Dict[str, Any], result: Dict[str, Any],
+                           log_callback=None):
         """
         发送任务结果通知（支持多个通知类型）
         :param module_name: 模块名
@@ -150,9 +151,9 @@ class Notifier:
         :param module_config: 模块配置
         :param result: 执行结果，支持 success, message, notify_title, notify_content, attachment_path
         """
-        # 跳过无通知内容的推送
-        if result.get("notify_title") is None and result.get("notify_content") is None:
-            return
+        def log(level: str, message: str):
+            if log_callback:
+                log_callback(level, message, module_name)
 
         # 获取全局配置
         global_config = cls.get_global_config()
@@ -161,19 +162,23 @@ class Notifier:
         # 检查通知级别
         success = result.get("success", False)
         if notify_level == "none":
+            log("INFO", "通知跳过: 全局通知级别为 none")
             return
         if notify_level == "error" and success:
+            log("INFO", "通知跳过: 全局通知级别为 error，当前任务成功")
             return
 
         # 获取模块推送配置
         notify_enabled = module_config.get("notify_enabled", False)
         if not notify_enabled:
+            log("INFO", "通知跳过: 模块未启用推送")
             return
 
         # 支持单个字符串或数组格式（多选）
         notify_types = module_config.get("notify_type", ["wechat"])
         if isinstance(notify_types, str):
             notify_types = [notify_types]
+        log("INFO", f"通知配置: enabled={notify_enabled}, types={notify_types}")
 
         # 构造通用的通知内容
         message = result.get("message", "")
@@ -198,10 +203,21 @@ class Notifier:
         # 逐个发送每个配置的通知类型
         for notify_type in notify_types:
             notify_type = notify_type.strip().lower()
-            target = cls._get_notify_target(notify_type, module_config, global_config)
+            if not notify_type:
+                continue
 
-            if target:
-                cls.send(notify_type, target, title, content, attachment_path=attachment_path)
+            target = cls._get_notify_target(notify_type, module_config, global_config)
+            log("INFO", f"通知目标检查: type={notify_type}, target={'已配置' if target else '未配置'}")
+
+            if not target:
+                log("WARNING", f"通知跳过: {notify_type} 未配置目标地址")
+                continue
+
+            sent = cls.send(notify_type, target, title, content, attachment_path=attachment_path)
+            if sent:
+                log("SUCCESS", f"通知发送成功: {notify_type}")
+            else:
+                log("ERROR", f"通知发送失败: {notify_type}")
 
     @classmethod
     def _get_notify_target(cls, notify_type: str, module_config: Dict[str, Any],

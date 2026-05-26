@@ -60,6 +60,7 @@ class TaskQueueScheduler:
         self.waiting_tasks: Dict[str, datetime] = {}  # 等待中: {module_name: next_run_time}
         self.queue_tasks: List[str] = []  # 队列中: [module_name, ...]
         self.running_tasks: Dict[str, threading.Thread] = {}  # 运行中: {module_name: thread}
+        self.stopping_tasks = set()
 
         self.max_concurrent = max_concurrent
         self._lock = threading.Lock()
@@ -245,7 +246,8 @@ class TaskQueueScheduler:
                     "notify_title": result.notify_title,
                     "notify_content": result.notify_content,
                     "attachment_path": result.attachment_path
-                }
+                },
+                log_callback=add_log
             )
 
         except Exception as e:
@@ -257,7 +259,8 @@ class TaskQueueScheduler:
                 module_name=module_name,
                 module_display_name=module_display_name,
                 module_config=module_config,
-                result={"success": False, "message": error_msg}
+                result={"success": False, "message": error_msg},
+                log_callback=add_log
             )
 
         finally:
@@ -339,10 +342,33 @@ class TaskQueueScheduler:
             if task:
                 task._run_mode = mode
 
+            self.stopping_tasks.discard(module_name)
+
             # 加入队列首位
             if module_name not in self.queue_tasks:
                 self.queue_tasks.insert(0, module_name)
 
+            return True
+
+    def stop_task(self, module_name: str) -> bool:
+        with self._lock:
+            task = self.task_instances.get(module_name)
+            if not task:
+                return False
+
+            if module_name in self.queue_tasks:
+                self.queue_tasks.remove(module_name)
+                add_log("WARNING", "已从队列移除", module_name)
+                return True
+
+            if module_name in self.running_tasks:
+                self.stopping_tasks.add(module_name)
+                task.stop()
+                add_log("WARNING", "已发送停止请求，等待任务安全退出", module_name)
+                return True
+
+            task.stop()
+            add_log("WARNING", "任务已标记停止", module_name)
             return True
 
     def set_manual_time(self, module_name: str, time_str: str):

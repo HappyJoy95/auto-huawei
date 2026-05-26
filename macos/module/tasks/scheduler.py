@@ -245,7 +245,8 @@ class TaskQueueScheduler:
                     "notify_title": result.notify_title,
                     "notify_content": result.notify_content,
                     "attachment_path": result.attachment_path
-                }
+                },
+                log_callback=add_log
             )
 
         except Exception as e:
@@ -257,7 +258,8 @@ class TaskQueueScheduler:
                 module_name=module_name,
                 module_display_name=module_display_name,
                 module_config=module_config,
-                result={"success": False, "message": error_msg}
+                result={"success": False, "message": error_msg},
+                log_callback=add_log
             )
 
         finally:

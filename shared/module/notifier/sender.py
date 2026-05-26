@@ -1,5 +1,5 @@
 """
-通知发送模块 - 支持企业微信和邮箱
+通知发送模块 - 支持企业微信和邮箱（可多选）
 """
 import os
 import requests
@@ -8,7 +8,7 @@ import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from datetime import datetime
 import yaml
 from pathlib import Path
@@ -142,14 +142,19 @@ class Notifier:
 
     @classmethod
     def notify_task_result(cls, module_name: str, module_display_name: str,
-                           module_config: Dict[str, Any], result: Dict[str, Any]):
+                           module_config: Dict[str, Any], result: Dict[str, Any],
+                           log_callback=None):
         """
-        发送任务结果通知
+        发送任务结果通知（支持多个通知类型）
         :param module_name: 模块名
         :param module_display_name: 显示名
         :param module_config: 模块配置
         :param result: 执行结果，支持 success, message, notify_title, notify_content, attachment_path
         """
+        def log(level: str, message: str):
+            if log_callback:
+                log_callback(level, message, module_name)
+
         # 获取全局配置
         global_config = cls.get_global_config()
         notify_level = global_config.get("notify_level", "all")
@@ -157,24 +162,25 @@ class Notifier:
         # 检查通知级别
         success = result.get("success", False)
         if notify_level == "none":
+            log("INFO", "通知跳过: 全局通知级别为 none")
             return
         if notify_level == "error" and success:
+            log("INFO", "通知跳过: 全局通知级别为 error，当前任务成功")
             return
 
         # 获取模块推送配置
         notify_enabled = module_config.get("notify_enabled", False)
-        notify_type = module_config.get("notify_type", "wechat")
-        notify_target = module_config.get("notify_target", "")
+        if not notify_enabled:
+            log("INFO", "通知跳过: 模块未启用推送")
+            return
 
-        # 如果模块未配置推送目标，使用全局配置
-        if not notify_enabled or not notify_target:
-            global_webhook = os.environ.get("WECHAT_WEBHOOK") or global_config.get("wechat_webhook", "")
-            if global_webhook:
-                notify_type = "wechat"
-                notify_target = global_webhook
-            else:
-                return
+        # 支持单个字符串或数组格式（多选）
+        notify_types = module_config.get("notify_type", ["wechat"])
+        if isinstance(notify_types, str):
+            notify_types = [notify_types]
+        log("INFO", f"通知配置: enabled={notify_enabled}, types={notify_types}")
 
+        # 构造通用的通知内容
         message = result.get("message", "")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -193,5 +199,51 @@ class Notifier:
                 content = f"模块: {module_display_name}\n时间: {timestamp}\n错误: {message}"
 
         attachment_path = result.get("attachment_path")
-        cls.send(notify_type, notify_target, title, content,
-                 attachment_path=attachment_path)
+
+        # 逐个发送每个配置的通知类型
+        for notify_type in notify_types:
+            notify_type = notify_type.strip().lower()
+            if not notify_type:
+                continue
+
+            target = cls._get_notify_target(notify_type, module_config, global_config)
+            log("INFO", f"通知目标检查: type={notify_type}, target={'已配置' if target else '未配置'}")
+
+            if not target:
+                log("WARNING", f"通知跳过: {notify_type} 未配置目标地址")
+                continue
+
+            sent = cls.send(notify_type, target, title, content, attachment_path=attachment_path)
+            if sent:
+                log("SUCCESS", f"通知发送成功: {notify_type}")
+            else:
+                log("ERROR", f"通知发送失败: {notify_type}")
+
+    @classmethod
+    def _get_notify_target(cls, notify_type: str, module_config: Dict[str, Any],
+                           global_config: Dict[str, Any]) -> str:
+        """
+        根据通知类型获取对应的目标地址
+        :param notify_type: 通知类型 (wechat, email)
+        :param module_config: 模块配置
+        :param global_config: 全局配置
+        :return: 目标地址
+        """
+        # 先检查模块配置中是否有对应类型的专属目标
+        type_target_key = f"notify_{notify_type}_target"
+        if module_config.get(type_target_key):
+            return module_config[type_target_key]
+
+        # 检查通用的 notify_target
+        if module_config.get("notify_target"):
+            return module_config["notify_target"]
+
+        # 回退到全局配置
+        if notify_type == "wechat":
+            webhook = os.environ.get("WECHAT_WEBHOOK") or global_config.get("wechat_webhook")
+            if webhook:
+                return webhook
+        if notify_type == "email":
+            return global_config.get("email", "")
+
+        return ""
