@@ -54,7 +54,6 @@ data/
 .claude/
 
 # 凭据和敏感配置（包含密码、token、webhook 等）
-config/general.yaml
 **/config/config.yaml
 **/config/tasks.yaml
 **/config.json

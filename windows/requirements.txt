@@ -9,6 +9,7 @@ croniter>=1.3.0
 
 # 配置
 pyyaml>=6.0
+python-dotenv>=1.0.0
 
 # HTTP 请求
 requests>=2.31.0

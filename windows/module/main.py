@@ -8,6 +8,11 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
+# 加载 .env 环境变量
+from dotenv import load_dotenv
+PROJECT_ROOT = ROOT_DIR.parent
+load_dotenv(PROJECT_ROOT / ".env")
+
 # 优先使用 shared/ 中的共享模块代码
 SHARED_DIR = ROOT_DIR.parent / "shared"
 if SHARED_DIR.is_dir():
