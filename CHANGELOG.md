@@ -1,5 +1,7 @@
 # 更新日志
 
+> **跨平台同步机制**：macOS 和 Windows 平台代码已分开管理，不再自动同步。每个版本的"跨平台同步"板块列出了需要在另一平台手动同步的变更，另一平台需要查看此板块并自行应用相应修改。
+
 ## v0.2.1 (2026-05-25)
 
 ### 安全加固
@@ -54,6 +56,22 @@
 | `macos/.gitignore` | 补全规则 |
 | `windows/.gitignore` | 补全规则 |
 | `.env.example` | 新增：环境变量模板 |
+
+### 跨平台同步
+
+> 以下变更需要另一平台手动同步
+
+| 变更项 | 说明 |
+|---|---|
+| `shared/module/notifier/sender.py` | 环境变量优先 + 移除 camelCase 兼容，Windows 需同步 |
+| `shared/module/api/routes/config.py` | 脱敏 + Schema 补全 + 移除 camelCase，Windows 需同步 |
+| `shared/module/tasks/scheduler.py` | 任务超时、日志记录等优化，macOS/Windows 需同步 |
+| `macos/modules/jddj_orders/task.py` | 环境变量 + 移除硬编码用户名，Windows 需同步 |
+| `macos/config/general.yaml` | snake_case + 移除凭据，Windows 需同步 |
+| `macos/config/config.yaml` | 移除 notification 块，Windows 需同步 |
+| `macos/config/tasks.yaml` | 移除硬编码用户名，Windows 需同步 |
+| `macos/.gitignore` | 补全规则，Windows 需同步 |
+| `windows/packages/renderer/src/views/Config.vue` | 移除通知设置 Tab，macOS 无需此文件 |
 
 ## v0.2.0 (2026-05-25)
 
