@@ -150,6 +150,10 @@ class Notifier:
         :param module_config: 模块配置
         :param result: 执行结果，支持 success, message, notify_title, notify_content, attachment_path
         """
+        # 跳过无通知内容的推送
+        if result.get("notify_title") is None and result.get("notify_content") is None:
+            return
+
         # 获取全局配置
         global_config = cls.get_global_config()
         notify_level = global_config.get("notify_level", "all")

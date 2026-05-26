@@ -60,10 +60,6 @@
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="无头模式">
-          <a-switch v-model="config.headless" />
-          <span class="form-hint">开启后模拟器窗口不显示</span>
-        </a-form-item>
       </a-card>
 
       <!-- 通知设置 -->
@@ -166,7 +162,6 @@ const config = reactive({
   concurrency: 1,
   adb_address: '127.0.0.1:16448',
   emulator_type: 'mumu',
-  headless: true,
   notify_level: 'all',
   smtp_server: 'smtp.qq.com',
   smtp_port: 587,

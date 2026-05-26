@@ -147,10 +147,15 @@ class TaskQueueScheduler:
                 return
 
             scheduler_config = module_info.get("scheduler_config", {})
+            module_config = module_info.get("module_config", {})
             self.task_configs[module_name] = {
                 "scheduler": scheduler_config,
-                "module": module_info.get("module_config", {})
+                "module": module_config
             }
+
+            task = self.task_instances.get(module_name)
+            if task:
+                task.config = module_config
 
             # 计算新的下次执行时间
             if scheduler_config.get("enabled", True):

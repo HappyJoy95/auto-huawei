@@ -11,6 +11,11 @@ fields:
         label: 主页链接
         type: text
 
+  - key: headless
+    label: 无头模式
+    type: switch
+    default: true
+
   - key: notify_enabled
     label: 启用推送
     type: switch

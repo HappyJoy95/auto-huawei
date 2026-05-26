@@ -28,7 +28,7 @@ class ConfigUpdateRequest(BaseModel):
 # 通用配置白名单字段
 GENERAL_CONFIG_ALLOWED_KEYS = {
     "check_interval", "retry_count", "task_timeout", "concurrency",
-    "adb_address", "emulator_type", "headless",
+    "adb_address", "emulator_type",
     "notify_level", "notify_type", "wechat_webhook",
     "smtp_server", "smtp_port", "smtp_user", "smtp_password",
     "receiver_email", "log_level", "log_retention", "browser"
@@ -37,7 +37,7 @@ GENERAL_CONFIG_ALLOWED_KEYS = {
 
 class GeneralConfigModel(BaseModel):
     """通用配置 Schema - 仅允许已知字段"""
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "ignore"}
 
     check_interval: Optional[int] = None
     retry_count: Optional[int] = None
@@ -45,7 +45,6 @@ class GeneralConfigModel(BaseModel):
     concurrency: Optional[int] = None
     adb_address: Optional[str] = None
     emulator_type: Optional[str] = None
-    headless: Optional[bool] = None
     notify_level: Optional[str] = None
     notify_type: Optional[str] = None
     wechat_webhook: Optional[str] = None
@@ -74,6 +73,7 @@ async def get_general_config():
     if config_file.exists():
         with open(config_file, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
+    config = {k: v for k, v in config.items() if k in GENERAL_CONFIG_ALLOWED_KEYS}
     # 环境变量覆盖：如果环境变量设置了敏感配置，标记为已配置
     env_overrides = {}
     if os.environ.get("SMTP_USER"):

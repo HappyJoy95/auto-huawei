@@ -2,7 +2,7 @@
 抖音数据采集任务
 """
 from module.tasks.base import BaseTask, TaskResult, TaskStatus
-from module.config.config import Config, DATA_DIR
+from module.config.config import DATA_DIR
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
@@ -52,8 +52,7 @@ class DouyinTask(BaseTask):
             douyin_data_dir.mkdir(parents=True, exist_ok=True)
             data_file = douyin_data_dir / "posts.json"
 
-            browser_config = Config.get_browser_config()
-            headless = self.config.get("headless", browser_config.get("headless", True))
+            headless = self.config.get("headless", True)
             accounts = self.config.get("accounts", [])
             max_posts = self.config.get("max_posts_per_store", 50)
 

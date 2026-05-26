@@ -29,7 +29,7 @@ export async function getTaskStatus(moduleName: string) {
 }
 
 export async function runTaskNow(moduleName: string, mode: string = 'normal') {
-  return request(`/scheduler/task/${moduleName}/run-now?mode=${mode}`)
+  return request(`/scheduler/task/${moduleName}/run-now?mode=${mode}`, { method: 'POST' })
 }
 
 export async function setManualTime(moduleName: string, time: string) {

@@ -1,5 +1,7 @@
 # 敏感配置
 config/general.yaml
+config/config.yaml
+config/tasks.yaml
 modules/*/config.json
 modules/*/config.yaml
 

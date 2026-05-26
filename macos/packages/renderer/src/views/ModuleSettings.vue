@@ -182,7 +182,7 @@
               style="width: 100%"
             >
               <a-option
-                v-for="opt in field.options"
+                v-for="opt in getFieldOptions(field)"
                 :key="opt.value"
                 :value="opt.value"
               >
@@ -195,7 +195,7 @@
               v-model="moduleConfig[field.key]"
             >
               <a-checkbox
-                v-for="opt in field.options"
+                v-for="opt in getFieldOptions(field)"
                 :key="opt.value"
                 :value="opt.value"
               >
@@ -358,6 +358,13 @@ function getFieldLabel(field: any): string {
     return notifyType === 'wechat' ? 'Webhook地址' : '目标邮箱'
   }
   return field.label
+}
+
+function getFieldOptions(field: any) {
+  if (field.options_from) {
+    return moduleConfig.value[field.options_from] || []
+  }
+  return field.options || []
 }
 
 function isNotifyTargetHidden(field: any): boolean {
