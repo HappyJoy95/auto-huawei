@@ -56,37 +56,24 @@ export SMTP_PASSWORD=你的授权码
 
 ### Electron 启动失败
 
-确保 Node.js 版本 >= 18：
+确保 Node.js >= 18，并清除 `ELECTRON_RUN_AS_NODE`：
 
 ```bash
 node -v
-```
-
-如果环境变量 `ELECTRON_RUN_AS_NODE=1` 被设置，需要先清除：
-
-```bash
 unset ELECTRON_RUN_AS_NODE
 ```
 
 ### Python 模块找不到
 
-确保激活了虚拟环境：
-
-```bash
-source venv/bin/activate
-```
+确保激活了虚拟环境：`source venv/bin/activate`
 
 ### 端口被占用
 
-后端默认使用 5001 端口，确保未被占用：
-
-```bash
-lsof -i :5001
-```
+后端默认使用 5001 端口：`lsof -i :5001`
 
 ### Playwright 浏览器未安装
 
-如果京东到家模块报错，需要安装 Chromium：
+如果京东到家模块报错：
 
 ```bash
 source venv/bin/activate
