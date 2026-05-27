@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import * as api from '../services/api'
+import * as api from '@/services/api'
 import { Message } from '@arco-design/web-vue'
 
 const saving = ref(false)

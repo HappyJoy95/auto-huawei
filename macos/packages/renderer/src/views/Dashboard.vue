@@ -128,8 +128,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useModuleStore } from '../stores/module'
-import * as api from '../services/api'
+import { useModuleStore } from '@/stores/module'
+import * as api from '@/services/api'
 import {
   IconPlayArrow,
   IconPause,

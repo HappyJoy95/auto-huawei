@@ -61,7 +61,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useModuleStore } from '../stores/module'
+import { useModuleStore } from '@/stores/module'
+import * as api from '@/services/api'
 import { Message } from '@arco-design/web-vue'
 import { IconPlayArrow, IconSettings } from '@arco-design/web-vue/es/icon'
 
@@ -85,10 +86,7 @@ async function runTask() {
   addLog('INFO', '任务开始执行...')
 
   try {
-    const response = await fetch(`http://127.0.0.1:5001/api/tasks/${moduleName.value}/run`, {
-      method: 'POST'
-    })
-    const result = await response.json()
+    const result = await api.runTask(moduleName.value)
 
     if (result.success) {
       Message.success('任务已启动')
@@ -114,10 +112,8 @@ function addLog(level: string, msg: string) {
 onMounted(async () => {
   await moduleStore.loadModules()
 
-  // 获取任务状态
   try {
-    const response = await fetch(`http://127.0.0.1:5001/api/tasks/`)
-    const tasks = await response.json()
+    const tasks = await api.getTasks()
     taskStatus.value = tasks.find((t: any) => t.id === moduleName.value)
   } catch (e) {
     console.error('Failed to fetch task status:', e)

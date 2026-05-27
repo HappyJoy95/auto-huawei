@@ -298,9 +298,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import * as api from '../services/api'
+import * as api from '@/services/api'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
-import { useModuleStore } from '../stores/module'
+import { useModuleStore } from '@/stores/module'
 import { Message } from '@arco-design/web-vue'
 import { IconLeft, IconDelete, IconPlus, IconClose, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 

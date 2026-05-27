@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useModuleStore } from '../stores/module'
+import { useModuleStore } from '@/stores/module'
 import { IconApps } from '@arco-design/web-vue/es/icon'
 
 const router = useRouter()

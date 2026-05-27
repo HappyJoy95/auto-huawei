@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import axios from 'axios'
-import { PythonManager } from './python'
+import { PythonManager } from '@shared-main/python'
 
 let mainWindow: BrowserWindow | null = null
 let pythonManager: PythonManager | null = null

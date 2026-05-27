@@ -299,7 +299,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
-import { useModuleStore } from '../stores/module'
+import { useModuleStore } from '@/stores/module'
+import * as api from '@/services/api'
 import { Message } from '@arco-design/web-vue'
 import { IconLeft, IconDelete, IconPlus, IconClose, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 
@@ -571,10 +572,7 @@ async function runTest() {
   testResult.value = null
 
   try {
-    const response = await fetch(`http://127.0.0.1:5001/api/scheduler/task/${moduleName.value}/run-now?mode=test`, {
-      method: 'POST'
-    })
-    const result = await response.json()
+    const result = await api.runTaskNow(moduleName.value, 'test')
 
     if (result.success) {
       Message.success('任务已加入执行队列')
@@ -646,13 +644,13 @@ async function loadModuleStyle() {
   }
 
   try {
-    const response = await fetch(`http://127.0.0.1:5001/api/modules/${moduleName.value}/style`)
-    const result = await response.json()
+    const result = await api.modules.getStyle(moduleName.value)
+    const css = result.css || result.style
 
-    if (result.css) {
+    if (css) {
       const style = document.createElement('style')
       style.id = `module-style-${moduleName.value}`
-      style.textContent = result.css
+      style.textContent = css
       document.head.appendChild(style)
       styleElement.value = style
     }

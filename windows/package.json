@@ -1,16 +1,16 @@
 {
   "name": "auto-controller",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "自动化任务控制器 - 支持模块化任务调度与通知推送",
   "main": "packages/main/dist/main.cjs",
   "author": "happy",
   "license": "MIT",
   "scripts": {
-    "dev": "node scripts/watch.mjs",
+    "dev": "node ../shared/scripts/watch.mjs",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
-    "build:main": "cd packages/main && npx vite build",
-    "build:preload": "cd packages/preload && npx vite build",
-    "build:renderer": "cd packages/renderer && npx vite build",
+    "build:main": "npx vite build --config ../shared/packages/main/vite.config.ts",
+    "build:preload": "npx vite build --config ../shared/packages/preload/vite.config.ts",
+    "build:renderer": "npx vite build --config ../shared/packages/renderer/vite.config.ts",
     "start": "set NODE_ENV=production && .\\node_modules\\electron\\dist\\electron.exe .",
     "start:dev": "set NODE_ENV=development && .\\node_modules\\electron\\dist\\electron.exe ."
   },

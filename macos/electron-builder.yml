@@ -7,7 +7,14 @@ files:
   - packages/main/dist/**/*
   - packages/preload/dist/**/*
   - packages/renderer/dist/**/*
-  - module/**/*
+  - from: ../shared/module
+    to: module
+    filter:
+      - "**/*"
+  - from: ../shared/modules
+    to: modules
+    filter:
+      - "**/*"
   - modules/**/*
   - config/**/*
   - requirements.txt

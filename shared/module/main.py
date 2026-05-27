@@ -6,7 +6,13 @@ import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent.parent
+PROJECT_ROOT = Path(os.environ.get("AUTO_CONTROLLER_ROOT", Path.cwd()))
+os.environ.setdefault("AUTO_CONTROLLER_ROOT", str(PROJECT_ROOT))
+os.environ.setdefault("AUTO_CONTROLLER_SHARED_ROOT", str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR))
+
+from dotenv import load_dotenv
+load_dotenv(PROJECT_ROOT / ".env")
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -25,9 +31,13 @@ async def lifespan(app: FastAPI):
     # 加载配置
     cfg = Config.load()
 
-    # 任务目录配置 - 默认扫描 modules/ 目录
-    modules_dir = ROOT_DIR / "modules"
-    default_task_dirs = [str(modules_dir)]
+    shared_modules_dir = ROOT_DIR / "modules"
+    platform_modules_dir = PROJECT_ROOT / "modules"
+    default_task_dirs = [
+        str(path)
+        for path in (shared_modules_dir, platform_modules_dir)
+        if path.is_dir()
+    ]
 
     external_task_dirs = cfg.get("task_dirs", [])
     if isinstance(external_task_dirs, str):

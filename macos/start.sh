@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 unset ELECTRON_RUN_AS_NODE
 
 echo "========================================"
-echo "  Auto Controller v0.1.0 (macOS)"
+echo "  Auto Controller v0.3.0 (macOS)"
 echo "========================================"
 
 # 检查 Python 虚拟环境

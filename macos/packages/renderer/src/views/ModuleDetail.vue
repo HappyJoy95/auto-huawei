@@ -61,8 +61,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useModuleStore } from '../stores/module'
-import * as api from '../services/api'
+import { useModuleStore } from '@/stores/module'
+import * as api from '@/services/api'
 import { Message } from '@arco-design/web-vue'
 import { IconPlayArrow, IconSettings } from '@arco-design/web-vue/es/icon'
 

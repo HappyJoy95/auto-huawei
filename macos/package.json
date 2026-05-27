@@ -1,16 +1,16 @@
 {
   "name": "auto-controller",
-  "version": "0.1.1-mac",
+  "version": "0.3.0",
   "description": "自动化任务控制器 - macOS 版本",
   "main": "packages/main/dist/main.cjs",
   "author": "happy",
   "license": "MIT",
   "scripts": {
-    "dev": "node scripts/watch.mjs",
+    "dev": "node ../shared/scripts/watch.mjs",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
-    "build:main": "cd packages/main && npx vite build",
-    "build:preload": "cd packages/preload && npx vite build",
-    "build:renderer": "cd packages/renderer && npx vite build",
+    "build:main": "npx vite build --config ../shared/packages/main/vite.config.ts",
+    "build:preload": "npx vite build --config ../shared/packages/preload/vite.config.ts",
+    "build:renderer": "npx vite build --config ../shared/packages/renderer/vite.config.ts",
     "start": "NODE_ENV=production ./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron .",
     "start:dev": "NODE_ENV=development ./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron ."
   },

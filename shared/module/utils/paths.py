@@ -5,6 +5,7 @@
 基于 __file__ 的路径会指向 shared/ 下不存在的目录。
 此模块通过 sys.path 动态查找包含 modules/ 目录的真实项目根目录。
 """
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -24,7 +25,11 @@ def get_project_root() -> Path:
     if _cached_root is not None:
         return _cached_root
 
-    # 基于 __file__ 的默认路径（module/utils/paths.py -> 项目根）
+    env_root = os.environ.get("AUTO_CONTROLLER_ROOT")
+    if env_root:
+        _cached_root = Path(env_root)
+        return _cached_root
+
     default_root = Path(__file__).parent.parent.parent
 
     # 遍历 sys.path 查找包含 modules/ 的项目根目录
