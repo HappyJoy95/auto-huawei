@@ -25,7 +25,7 @@ curl -s http://localhost:5173 >nul 2>&1
 if %errorlevel%==0 (
     echo [Vite] Server already running
 ) else (
-    start "Vite Dev Server" /min cmd /c "cd packages\renderer && npx vite --host"
+    start "Vite Dev Server" /min cmd /c "set PLATFORM_ROOT=%CD%&& cd ..\shared\packages\renderer&& ..\..\..\windows\node_modules\.bin\vite --host"
     timeout /t 3 /nobreak >nul
 )
 

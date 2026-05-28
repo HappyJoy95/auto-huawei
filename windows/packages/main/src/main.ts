@@ -62,7 +62,7 @@ function setupIpc() {
 
   ipcMain.handle('task:start', async (_, taskId: string) => {
     const axios = require('axios')
-    const response = await axios.post(`${API_BASE}/tasks/${taskId}/start`)
+    const response = await axios.post(`${API_BASE}/tasks/${taskId}/run`)
     return response.data
   })
 

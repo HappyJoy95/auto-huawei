@@ -70,7 +70,7 @@ function setupIpc() {
 
   ipcMain.handle('task:start', async (_, taskId: string) => {
     validateSafeName(taskId, 'taskId')
-    const response = await axios.post(`${API_BASE}/tasks/${taskId}/start`)
+    const response = await axios.post(`${API_BASE}/tasks/${taskId}/run`)
     return response.data
   })
 

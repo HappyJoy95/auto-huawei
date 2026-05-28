@@ -12,7 +12,7 @@ timeout /t 3 /nobreak >nul
 
 :: 启动 Vite 开发服务器
 echo [2/3] 启动前端开发服务器...
-start "Vite Dev Server" cmd /c "cd packages\renderer && npx vite"
+start "Vite Dev Server" cmd /c "set PLATFORM_ROOT=%CD%&& cd ..\shared\packages\renderer&& ..\..\..\windows\node_modules\.bin\vite"
 timeout /t 5 /nobreak >nul
 
 :: 启动 Electron

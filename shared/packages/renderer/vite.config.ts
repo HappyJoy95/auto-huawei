@@ -1,8 +1,11 @@
 import { createRequire } from 'module'
 import { resolve } from 'path'
 
-const platformRoot = process.cwd()
-const require = createRequire(resolve(platformRoot, 'package.json'))
+const platformRoot = process.env.PLATFORM_ROOT
+  ? resolve(process.env.PLATFORM_ROOT)
+  : resolve(process.cwd(), '..', '..', '..', 'windows')
+
+const require = createRequire(resolve(platformRoot, 'packages', 'renderer', 'package.json'))
 const vue = require('@vitejs/plugin-vue')
 
 export default {
