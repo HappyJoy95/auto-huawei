@@ -10,10 +10,10 @@ router = APIRouter()
 @router.get("/")
 async def list_tasks():
     """获取所有任务状态"""
-    from module.tasks.scheduler import get_scheduler
+    from module.tasks.scheduler import get_scheduler, empty_scheduler_status
     scheduler = get_scheduler()
     if not scheduler:
-        return {"running": False, "waiting": [], "queue": [], "running_now": []}
+        return empty_scheduler_status()
     return scheduler.get_status()
 
 
@@ -49,10 +49,9 @@ async def stop_task(task_id: str):
     if not scheduler:
         raise HTTPException(status_code=503, detail="Scheduler not initialized")
 
-    task = scheduler.task_instances.get(task_id)
-    if not task:
+    success = scheduler.stop_task(task_id)
+    if not success:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    task.stop()
     return {"success": True, "message": f"Task {task_id} stopped"}
 
 

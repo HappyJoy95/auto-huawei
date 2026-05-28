@@ -2,20 +2,21 @@
 任务队列调度器 - 管理任务的等待、排队、执行状态
 """
 import threading
-import time
 from typing import Dict, List, Optional, Type
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import deque
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
-from croniter import croniter
 
-from module.tasks.base import BaseTask, TaskStatus, TaskInfo
+from module.tasks.base import BaseTask, TaskStatus
 from module.tasks.loader import TaskLoader
 from module.core.module_manager import module_manager
 from module.notifier.sender import Notifier
 from module.utils.scheduler_utils import calculate_next_run, parse_manual_time
+
+POOL_SIMULATOR = "simulator"
+POOL_BROWSER = "browser"
+POOL_REPORT = "report"
+POOL_TYPES = (POOL_SIMULATOR, POOL_BROWSER, POOL_REPORT)
 
 # 全局日志队列
 _log_queue: deque = deque(maxlen=500)
@@ -42,6 +43,24 @@ def get_logs(limit: int = 100) -> List[Dict]:
         return list(_log_queue)[-limit:]
 
 
+def empty_scheduler_status() -> Dict:
+    return {
+        "running": False,
+        "waiting": [],
+        "queue": [],
+        "running_now": [],
+        "pools": {
+            pool_type: {
+                "max_concurrent": 1,
+                "waiting": [],
+                "queue": [],
+                "running_now": []
+            }
+            for pool_type in POOL_TYPES
+        }
+    }
+
+
 class TaskQueueScheduler:
     """任务队列调度器"""
 
@@ -58,11 +77,14 @@ class TaskQueueScheduler:
         # 任务状态
         self.task_configs: Dict[str, Dict] = {}  # 模块配置
         self.waiting_tasks: Dict[str, datetime] = {}  # 等待中: {module_name: next_run_time}
-        self.queue_tasks: List[str] = []  # 队列中: [module_name, ...]
+        self.queue_tasks: Dict[str, List[str]] = {pool_type: [] for pool_type in POOL_TYPES}
         self.running_tasks: Dict[str, threading.Thread] = {}  # 运行中: {module_name: thread}
+        self.task_pool_types: Dict[str, str] = {}
+        self.running_task_pool_types: Dict[str, str] = {}
         self.stopping_tasks = set()
 
         self.max_concurrent = max_concurrent
+        self.pool_max_concurrent = {pool_type: max_concurrent for pool_type in POOL_TYPES}
         self._lock = threading.Lock()
         self._running = False
 
@@ -93,10 +115,14 @@ class TaskQueueScheduler:
             if not scheduler_config.get("enabled", True):
                 continue
 
+            pool_type = self._normalize_pool_type(module_info.get("meta", {}).get("pool_type"))
+            self.task_pool_types[module_name] = pool_type
+
             # 保存配置
             self.task_configs[module_name] = {
                 "scheduler": scheduler_config,
-                "module": module_info.get("module_config", {})
+                "module": module_info.get("module_config", {}),
+                "pool_type": pool_type
             }
 
             # 创建任务实例
@@ -143,20 +169,25 @@ class TaskQueueScheduler:
             if not module_info or not module_info.get("has_task"):
                 # 从所有队列移除
                 self.waiting_tasks.pop(module_name, None)
-                if module_name in self.queue_tasks:
-                    self.queue_tasks.remove(module_name)
+                self._remove_from_queues(module_name)
+                self.task_pool_types.pop(module_name, None)
                 return
 
             scheduler_config = module_info.get("scheduler_config", {})
             module_config = module_info.get("module_config", {})
+            pool_type = self._normalize_pool_type(module_info.get("meta", {}).get("pool_type"))
+            self.task_pool_types[module_name] = pool_type
             self.task_configs[module_name] = {
                 "scheduler": scheduler_config,
-                "module": module_config
+                "module": module_config,
+                "pool_type": pool_type
             }
 
             task = self.task_instances.get(module_name)
             if task:
                 task.config = module_config
+
+            self._remove_from_queues(module_name)
 
             # 计算新的下次执行时间
             if scheduler_config.get("enabled", True):
@@ -167,9 +198,53 @@ class TaskQueueScheduler:
             else:
                 self.waiting_tasks.pop(module_name, None)
 
-            # 从排队中移除（如果有）
-            if module_name in self.queue_tasks:
-                self.queue_tasks.remove(module_name)
+    def _normalize_pool_type(self, pool_type: str) -> str:
+        return pool_type if pool_type in POOL_TYPES else POOL_SIMULATOR
+
+    def _get_task_pool(self, module_name: str) -> str:
+        return self._normalize_pool_type(self.task_pool_types.get(module_name))
+
+    def _running_count(self, pool_type: str) -> int:
+        return sum(1 for task_pool in self.running_task_pool_types.values() if task_pool == pool_type)
+
+    def _is_queued(self, module_name: str) -> bool:
+        return any(module_name in queue for queue in self.queue_tasks.values())
+
+    def _remove_from_queues(self, module_name: str):
+        for queue in self.queue_tasks.values():
+            while module_name in queue:
+                queue.remove(module_name)
+
+    def _flatten_queue_tasks(self) -> List[str]:
+        result = []
+        for pool_type in POOL_TYPES:
+            result.extend(self.queue_tasks[pool_type])
+        return result
+
+    def _build_waiting_items(self) -> List[Dict]:
+        waiting = []
+        for name, next_run in sorted(self.waiting_tasks.items(), key=lambda x: x[1]):
+            waiting.append({
+                "name": name,
+                "next_run": next_run.isoformat(),
+                "pool_type": self._get_task_pool(name)
+            })
+        return waiting
+
+    def _build_pool_status(self, waiting: List[Dict]) -> Dict:
+        pools = {}
+        for pool_type in POOL_TYPES:
+            pools[pool_type] = {
+                "max_concurrent": self.pool_max_concurrent[pool_type],
+                "waiting": [item for item in waiting if item["pool_type"] == pool_type],
+                "queue": self.queue_tasks[pool_type].copy(),
+                "running_now": [
+                    name
+                    for name, running_pool in self.running_task_pool_types.items()
+                    if running_pool == pool_type
+                ]
+            }
+        return pools
 
     def _check_loop(self):
         """主检查循环 - 每秒执行"""
@@ -187,24 +262,30 @@ class TaskQueueScheduler:
 
             for module_name in to_queue:
                 del self.waiting_tasks[module_name]
-                self.queue_tasks.append(module_name)
-                add_log("INFO", "进入队列等待执行", module_name)
+                pool_type = self._get_task_pool(module_name)
+                if not self._is_queued(module_name):
+                    self.queue_tasks[pool_type].append(module_name)
+                    add_log("INFO", f"进入 {pool_type} 池队列", module_name)
 
-            # 2. 从队列中取出任务执行
-            while self.queue_tasks and len(self.running_tasks) < self.max_concurrent:
-                module_name = self.queue_tasks.pop(0)
-                self._start_task(module_name)
+            # 2. 从各池队列中取出任务执行
+            for pool_type in POOL_TYPES:
+                queue = self.queue_tasks[pool_type]
+                while queue and self._running_count(pool_type) < self.pool_max_concurrent[pool_type]:
+                    module_name = queue.pop(0)
+                    self._start_task(module_name)
 
     def _start_task(self, module_name: str):
         """启动任务执行"""
         task = self.task_instances.get(module_name)
-        if not task:
+        if not task or module_name in self.running_tasks:
             return
 
+        pool_type = self._get_task_pool(module_name)
         thread = threading.Thread(target=self._run_task, args=(module_name,))
         self.running_tasks[module_name] = thread
+        self.running_task_pool_types[module_name] = pool_type
         thread.start()
-        add_log("INFO", "开始执行", module_name)
+        add_log("INFO", f"开始执行 {pool_type} 池任务", module_name)
 
     def _run_task(self, module_name: str):
         """执行任务"""
@@ -264,8 +345,10 @@ class TaskQueueScheduler:
             )
 
         finally:
+            task._run_mode = "normal"
             with self._lock:
                 self.running_tasks.pop(module_name, None)
+                self.running_task_pool_types.pop(module_name, None)
 
                 # 计算下次执行时间并放回等待队列
                 config = self.task_configs.get(module_name, {})
@@ -284,18 +367,13 @@ class TaskQueueScheduler:
     def get_status(self) -> Dict:
         """获取调度器状态"""
         with self._lock:
-            waiting = []
-            for name, next_run in sorted(self.waiting_tasks.items(), key=lambda x: x[1]):
-                waiting.append({
-                    "name": name,
-                    "next_run": next_run.isoformat()
-                })
-
+            waiting = self._build_waiting_items()
             return {
                 "running": self._running,
                 "waiting": waiting,
-                "queue": self.queue_tasks.copy(),
-                "running_now": list(self.running_tasks.keys())
+                "queue": self._flatten_queue_tasks(),
+                "running_now": list(self.running_tasks.keys()),
+                "pools": self._build_pool_status(waiting)
             }
 
     def get_task_status(self, module_name: str) -> Dict:
@@ -303,10 +381,11 @@ class TaskQueueScheduler:
         with self._lock:
             status = "idle"
             next_run = None
+            pool_type = self._get_task_pool(module_name)
 
             if module_name in self.running_tasks:
                 status = "running"
-            elif module_name in self.queue_tasks:
+            elif self._is_queued(module_name):
                 status = "queued"
             elif module_name in self.waiting_tasks:
                 status = "waiting"
@@ -325,28 +404,35 @@ class TaskQueueScheduler:
         return {
             "status": status,
             "next_run": next_run,
+            "pool_type": pool_type,
             "task": task_info
         }
 
     def run_now(self, module_name: str, mode: str = "normal") -> bool:
         """立即执行任务"""
         with self._lock:
+            if module_name not in self.task_instances:
+                return False
+
             if module_name in self.running_tasks:
                 return False
+
+            # 设置运行模式（测试/正常）
+            task = self.task_instances.get(module_name)
+            task._run_mode = mode
+
+            if self._is_queued(module_name):
+                return True
 
             # 从等待中移除
             self.waiting_tasks.pop(module_name, None)
 
-            # 设置运行模式（测试/正常）
-            task = self.task_instances.get(module_name)
-            if task:
-                task._run_mode = mode
-
             self.stopping_tasks.discard(module_name)
 
-            # 加入队列首位
-            if module_name not in self.queue_tasks:
-                self.queue_tasks.insert(0, module_name)
+            # 加入对应池队列首位
+            pool_type = self._get_task_pool(module_name)
+            self.queue_tasks[pool_type].insert(0, module_name)
+            add_log("INFO", f"进入 {pool_type} 池队列", module_name)
 
             return True
 
@@ -356,8 +442,8 @@ class TaskQueueScheduler:
             if not task:
                 return False
 
-            if module_name in self.queue_tasks:
-                self.queue_tasks.remove(module_name)
+            if self._is_queued(module_name):
+                self._remove_from_queues(module_name)
                 add_log("WARNING", "已从队列移除", module_name)
                 return True
 

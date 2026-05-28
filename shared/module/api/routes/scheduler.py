@@ -10,21 +10,21 @@ router = APIRouter()
 @router.get("/status")
 async def get_scheduler_status():
     """获取调度器状态"""
-    from module.tasks.scheduler import get_scheduler
+    from module.tasks.scheduler import get_scheduler, empty_scheduler_status
     scheduler = get_scheduler()
     if scheduler:
         return scheduler.get_status()
-    return {"running": False, "waiting": [], "queue": [], "running_now": []}
+    return empty_scheduler_status()
 
 
 @router.get("/task/{module_name}")
 async def get_task_scheduler_status(module_name: str):
     """获取单个任务的调度状态"""
-    from module.tasks.scheduler import get_scheduler
+    from module.tasks.scheduler import get_scheduler, POOL_SIMULATOR
     scheduler = get_scheduler()
     if scheduler:
         return scheduler.get_task_status(module_name)
-    return {"status": "idle", "next_run": None}
+    return {"status": "idle", "next_run": None, "pool_type": POOL_SIMULATOR, "task": None}
 
 
 @router.post("/task/{module_name}/run-now")

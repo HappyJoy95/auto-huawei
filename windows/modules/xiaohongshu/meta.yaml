@@ -2,4 +2,5 @@
 display_name: 小红书
 description: 小红书数据采集与发布模块
 icon: shopping
+pool_type: simulator
 enabled: true

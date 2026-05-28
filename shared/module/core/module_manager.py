@@ -53,11 +53,15 @@ class ModuleManager:
             "display_name": module_name.replace("_", " ").title(),
             "description": "",
             "icon": "apps",
+            "pool_type": "simulator",
             "enabled": True
         }
         if meta_file.exists():
             with open(meta_file, "r", encoding="utf-8") as f:
                 meta.update(yaml.safe_load(f) or {})
+
+        if meta.get("pool_type") not in ("simulator", "browser", "report"):
+            meta["pool_type"] = "simulator"
 
         scheduler_config = {"enabled": True}
         if config_yaml.exists():
@@ -106,6 +110,7 @@ class ModuleManager:
                 "display_name": m["meta"]["display_name"],
                 "description": m["meta"]["description"],
                 "icon": m["meta"]["icon"],
+                "pool_type": m["meta"].get("pool_type", "simulator"),
                 "enabled": enabled,
                 "has_task": m["has_task"],
                 "next_run": next_run.isoformat() if next_run else None
