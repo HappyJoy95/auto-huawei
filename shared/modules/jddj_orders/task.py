@@ -87,7 +87,7 @@ class JddjOrdersTask(BaseTask):
             self.status = TaskStatus.COMPLETED
             self.update_progress(100, f"获取完成，{len(pending_orders)} 条待处理订单")
 
-            notify_content = ""
+            notify_content = None
             if pending_orders:
                 notify_lines = [
                     f"**待接单：** {result['待接单数量']} 单",
@@ -106,7 +106,10 @@ class JddjOrdersTask(BaseTask):
             return TaskResult(
                 success=True,
                 message=f"获取 {len(pending_orders)} 条待处理订单",
-                data=result,
+                data={
+                    **result,
+                    "store_names": list({o["门店"] for o in pending_orders if o.get("门店")}),
+                },
                 start_time=start_time,
                 end_time=datetime.now(),
                 notify_title="京东到家订单通知" if pending_orders else None,
@@ -234,7 +237,7 @@ class JddjOrdersTask(BaseTask):
                 orders.append({
                     "订单号": order_id,
                     "状态": status,
-                    "门店": self._extract_store(block) or self._find_nearest_store(text, status_match, order_id_match)
+                    "门店": self._extract_store(block) or self._find_nearest_store(text, status_match, order_id_match),
                 })
             except Exception as e:
                 self.log("WARNING", f"跳过无法解析的订单块: {e}")

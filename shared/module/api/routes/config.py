@@ -12,7 +12,11 @@ from module.utils.paths import get_project_root
 router = APIRouter()
 
 # 敏感字段列表，API 返回时脱敏
-SENSITIVE_KEYS = {"smtp_password", "wechat_webhook"}
+SENSITIVE_KEYS = {
+    "smtp_password",
+    "wechat_webhook",
+    "wechat_corpsecret",
+}
 
 
 class EmailTestRequest(BaseModel):
@@ -31,12 +35,15 @@ GENERAL_CONFIG_ALLOWED_KEYS = {
     "adb_address", "emulator_type",
     "notify_level", "notify_type", "wechat_webhook",
     "smtp_server", "smtp_port", "smtp_user", "smtp_password",
-    "receiver_email", "log_level", "log_retention", "browser"
+    "receiver_email", "log_level", "log_retention", "browser",
+    # 企业微信应用配置
+    "wechat_corpid", "wechat_corpsecret", "wechat_agentid", "wechat_app_targets",
 }
 
 
 class GeneralConfigModel(BaseModel):
     """通用配置 Schema - 仅允许已知字段"""
+
     model_config = {"extra": "ignore"}
 
     check_interval: Optional[int] = None
@@ -56,6 +63,11 @@ class GeneralConfigModel(BaseModel):
     log_level: Optional[str] = None
     log_retention: Optional[int] = None
     browser: Optional[str] = None
+    # 企业微信应用配置
+    wechat_corpid: Optional[str] = None
+    wechat_corpsecret: Optional[str] = None
+    wechat_agentid: Optional[str] = None
+    wechat_app_targets: Optional[Dict[str, Any]] = None
 
 
 @router.get("")
@@ -63,6 +75,24 @@ async def get_all_config():
     """获取所有配置"""
     from module.config.config import Config
     return Config.load()
+
+
+# 敏感环境变量白名单（仅返回是否已配置，不返回值）
+ENV_SECRET_KEYS = [
+    "JDDJ_USERNAME", "JDDJ_PASSWORD",
+    "SMTP_USER", "SMTP_PASSWORD",
+    "WECHAT_WEBHOOK", "WECHAT_CORP_ID", "WECHAT_AGENT_SECRET",
+    "WECHAT_DEFAULT_USERID",
+]
+
+
+@router.get("/env-status")
+async def get_env_status():
+    """获取环境变量配置状态（仅返回是否已配置，不返回值）"""
+    status = {}
+    for key in ENV_SECRET_KEYS:
+        status[key] = bool(os.environ.get(key))
+    return {"success": True, "status": status}
 
 
 @router.get("/general")
@@ -86,6 +116,13 @@ async def get_general_config():
         env_overrides["smtp_port"] = int(os.environ["SMTP_PORT"])
     if os.environ.get("WECHAT_WEBHOOK"):
         env_overrides["wechat_webhook"] = "********"
+    # 企业微信应用环境变量覆盖
+    if os.environ.get("WECHAT_CORP_ID"):
+        env_overrides["wechat_corpid"] = os.environ["WECHAT_CORP_ID"]
+    if os.environ.get("WECHAT_AGENT_ID"):
+        env_overrides["wechat_agentid"] = os.environ["WECHAT_AGENT_ID"]
+    if os.environ.get("WECHAT_AGENT_SECRET"):
+        env_overrides["wechat_corpsecret"] = "********"
     # 合并：环境变量优先
     merged = {**config, **env_overrides}
     # 脱敏：配置文件中的敏感字段用占位符替代
@@ -97,19 +134,23 @@ async def get_general_config():
 
 @router.put("/general")
 async def save_general_config(config: GeneralConfigModel):
-    """保存通用配置（脱敏占位符不会被写入）"""
+    """保存通用配置（合并写入，脱敏占位符不会被写入）"""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     config_file = CONFIG_DIR / "general.yaml"
-    # 过滤掉 None 值和脱敏占位符，只写入有效配置
-    config_data = {}
+    # 先读取现有配置
+    existing = {}
+    if config_file.exists():
+        with open(config_file, "r", encoding="utf-8") as f:
+            existing = yaml.safe_load(f) or {}
+    # 合并：只更新前端传来的有效字段
     for k, v in config.model_dump().items():
         if v is None:
             continue
         if k in SENSITIVE_KEYS and v == "********":
             continue
-        config_data[k] = v
+        existing[k] = v
     with open(config_file, "w", encoding="utf-8") as f:
-        yaml.dump(config_data, f, allow_unicode=True, default_flow_style=False)
+        yaml.dump(existing, f, allow_unicode=True, default_flow_style=False)
     return {"success": True}
 
 
@@ -132,7 +173,7 @@ async def set_config(key: str, request: ConfigUpdateRequest):
 
 
 @router.post("/test-email")
-async def test_email(request: EmailTestRequest | None = None):
+async def test_email(request: Optional[EmailTestRequest] = None):
     """测试邮件发送"""
     from module.notifier.sender import Notifier
     from datetime import datetime
@@ -154,3 +195,40 @@ async def test_email(request: EmailTestRequest | None = None):
     if success:
         return {"success": True, "message": f"测试邮件已发送至 {to_email}"}
     raise HTTPException(status_code=500, detail="邮件发送失败，请检查SMTP配置")
+
+
+class NotifyTestRequest(BaseModel):
+    """通知测试请求"""
+
+    channel: str  # wechat, wechat_app, email
+    target: str  # 接收目标
+    title: str = "测试消息"
+    content: str = "这是一条测试消息"
+    mock: bool = False  # 是否 Mock 模式
+
+
+@router.post("/test-notify")
+async def test_notify(request: NotifyTestRequest):
+    """测试通知渠道（支持所有渠道和 Mock 模式）"""
+    from module.notifier.channels import get_channel
+
+    channel = get_channel(request.channel)
+    if not channel:
+        raise HTTPException(status_code=400, detail=f"未知渠道: {request.channel}")
+
+    result = channel.send(
+        request.target, request.title, request.content, mock=request.mock
+    )
+
+    if isinstance(result, dict) and result.get("mock"):
+        return {"success": True, **result}
+
+    if result:
+        return {
+            "success": True,
+            "message": f"消息已通过 {request.channel} 发送",
+            "channel": request.channel,
+            "target": request.target,
+        }
+
+    raise HTTPException(status_code=500, detail="消息发送失败")

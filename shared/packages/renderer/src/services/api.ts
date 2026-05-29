@@ -66,8 +66,19 @@ export async function saveGeneralConfig(config: Record<string, any>) {
   })
 }
 
+export async function getEnvStatus() {
+  return request('/config/env-status')
+}
+
 export async function testEmail() {
   return request('/config/test-email', { method: 'POST' })
+}
+
+export async function testNotify(channel: string, target: string, mock: boolean = false) {
+  return request('/config/test-notify', {
+    method: 'POST',
+    body: JSON.stringify({ channel, target, mock })
+  })
 }
 
 // ===== 日志 API =====

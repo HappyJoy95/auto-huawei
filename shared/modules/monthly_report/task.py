@@ -232,7 +232,7 @@ class MonthlyReportTask(BaseTask):
             return json.load(f)
 
     def _format_notify_content(self, report: dict):
-        lines = [f"📊 {report['month_label']}运营月报", "━━━━━━━━━━━━━━━━━━━"]
+        lines = [f"**{report['month_label']}运营月报**"]
 
         douyin = report.get("douyin")
         if douyin:
@@ -246,30 +246,30 @@ class MonthlyReportTask(BaseTask):
         if inspection:
             lines.extend([
                 "",
-                "【巡检评分】",
-                f"覆盖门店：{inspection['store_count']}家 | 平均分：{inspection['avg_score']}",
-                f"满分门店：{inspection['full_score_count']}家 | 月均次数：{inspection['avg_monthly_count']}",
+                "**巡检评分**",
+                f"> 覆盖门店：{inspection['store_count']}家 | 平均分：{inspection['avg_score']}",
+                f"> 满分门店：{inspection['full_score_count']}家 | 月均次数：{inspection['avg_monthly_count']}",
             ])
             if inspection["low_score"]:
-                lines.append("需关注：" + "、".join(item["name"] for item in inspection["low_score"][:5]))
+                lines.append(f"> 需关注：{'、'.join(item['name'] for item in inspection['low_score'][:5])}")
 
-        lines.extend(["", "详细数据见邮件附件。", f"⏰ {datetime.now().strftime('%m-%d %H:%M')}"])
+        lines.extend(["", "_详细数据见邮件附件_", f"_{datetime.now().strftime('%m-%d %H:%M')}_"])
         return "\n".join(lines)
 
     def _format_platform_summary(self, platform_name: str, stats: dict):
         lines = [
             "",
-            f"【{platform_name}平台】",
-            f"本月新增：{stats['total_posts']}条 | 获赞：{stats['total_likes']} | 活跃门店：{stats['active_store_count']}家",
+            f"**{platform_name}平台**",
+            f"> 新增：{stats['total_posts']}条 | 获赞：{stats['total_likes']} | 活跃门店：{stats['active_store_count']}家",
         ]
         if stats["top"]:
-            lines.append("TOP门店：")
+            lines.append("> TOP门店：")
             for index, item in enumerate(stats["top"], 1):
-                lines.append(f"{index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
+                lines.append(f"> {index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
         if stats["zero_stores"]:
             shown = "、".join(stats["zero_stores"][:8])
             extra = f" 等{len(stats['zero_stores'])}家" if len(stats["zero_stores"]) > 8 else ""
-            lines.append(f"零发布：{shown}{extra}")
+            lines.append(f"> 零发布：{shown}{extra}")
         return lines
 
     def _write_excel(self, report: dict):

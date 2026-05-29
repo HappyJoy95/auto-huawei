@@ -1,10 +1,11 @@
 <template>
   <div class="module-settings">
-    <a-page-header>
+    <a-page-header :show-back="false">
       <template #title>
         <a-space>
-          <a-button @click="router.back()" type="text">
+          <a-button @click="router.push('/')" type="text">
             <template #icon><icon-left /></template>
+            总览
           </a-button>
           <span>{{ moduleDisplayName }}</span>
         </a-space>
@@ -20,6 +21,7 @@
               v-model="enabled"
               checked-text="已启用"
               unchecked-text="已禁用"
+              @change="autoSave"
             />
             <div v-if="enabled" class="next-run-display">
               <span class="next-run-label">下次执行:</span>
@@ -28,6 +30,7 @@
                 v-model="manualTime"
                 placeholder="mm-dd HH:MM:SS"
                 style="width: 150px"
+                @input="autoSave"
               />
               <span v-else class="next-run-time">{{ nextRunTime }}</span>
             </div>
@@ -38,7 +41,7 @@
 
         <!-- 定时任务设置 -->
         <a-form-item label="定时执行">
-          <a-radio-group v-model="scheduleType" type="button" size="small">
+          <a-radio-group v-model="scheduleType" type="button" size="small" @change="autoSave">
             <a-radio value="none">不定时</a-radio>
             <a-radio value="daily">每天</a-radio>
             <a-radio value="weekly">每周</a-radio>
@@ -54,6 +57,7 @@
             v-model="manualTime"
             placeholder="mm-dd HH:MM:SS"
             style="width: 160px"
+            @input="autoSave"
           />
           <span class="schedule-hint">到时间自动执行（格式：月-日 时:分:秒）</span>
         </div>
@@ -61,14 +65,14 @@
         <!-- 每天 -->
         <div v-if="scheduleType === 'daily'" class="schedule-config">
           <span class="schedule-label">每天</span>
-          <a-time-picker v-model="dailyTime" format="HH:mm" style="width: 120px" />
+          <a-time-picker v-model="dailyTime" format="HH:mm" style="width: 120px" @change="autoSave" />
           <span class="schedule-hint">执行</span>
         </div>
 
         <!-- 每周 -->
         <div v-if="scheduleType === 'weekly'" class="schedule-config">
           <span class="schedule-label">每周</span>
-          <a-select v-model="weeklyDay" style="width: 100px">
+          <a-select v-model="weeklyDay" style="width: 100px" @change="autoSave">
             <a-option :value="1">周一</a-option>
             <a-option :value="2">周二</a-option>
             <a-option :value="3">周三</a-option>
@@ -77,7 +81,7 @@
             <a-option :value="6">周六</a-option>
             <a-option :value="0">周日</a-option>
           </a-select>
-          <a-time-picker v-model="weeklyTime" format="HH:mm" style="width: 120px" />
+          <a-time-picker v-model="weeklyTime" format="HH:mm" style="width: 120px" @change="autoSave" />
           <span class="schedule-hint">执行</span>
         </div>
 
@@ -85,18 +89,18 @@
         <div v-if="scheduleType === 'interval'" class="schedule-config interval-config">
           <div class="interval-row">
             <span class="schedule-label">每隔</span>
-            <a-input-number v-model="intervalMinutes" :min="1" :max="1440" style="width: 100px" />
+            <a-input-number v-model="intervalMinutes" :min="1" :max="1440" style="width: 100px" @change="autoSave" />
             <span class="schedule-hint">分钟执行一次</span>
           </div>
           <div class="interval-row">
             <span class="schedule-label">生效时间</span>
-            <a-time-picker v-model="intervalStartTime" format="HH:mm" style="width: 100px" />
+            <a-time-picker v-model="intervalStartTime" format="HH:mm" style="width: 100px" @change="autoSave" />
             <span class="schedule-hint">至</span>
-            <a-time-picker v-model="intervalEndTime" format="HH:mm" style="width: 100px" />
+            <a-time-picker v-model="intervalEndTime" format="HH:mm" style="width: 100px" @change="autoSave" />
           </div>
           <div class="interval-row">
             <span class="schedule-label">生效日期</span>
-            <a-checkbox-group v-model="intervalDays">
+            <a-checkbox-group v-model="intervalDays" @change="autoSave">
               <a-checkbox :value="1">一</a-checkbox>
               <a-checkbox :value="2">二</a-checkbox>
               <a-checkbox :value="3">三</a-checkbox>
@@ -147,19 +151,35 @@
             v-show="!isNotifyTargetHidden(field)"
           >
             <!-- 文本输入 -->
-            <a-input
-              v-if="field.type === 'text'"
-              v-model="moduleConfig[field.key]"
-              :placeholder="field.placeholder"
-              allow-clear
-            />
+            <div v-else-if="field.type === 'text'" class="field-with-hint">
+              <a-input
+                v-model="moduleConfig[field.key]"
+                :placeholder="field.placeholder"
+                allow-clear
+                @input="autoSave"
+              />
+              <div v-if="field.env_key" class="env-priority-hint">
+                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
+                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
+                </a-tag>
+                <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
+              </div>
+            </div>
             <!-- 密码输入 -->
-            <a-input-password
-              v-else-if="field.type === 'password'"
-              v-model="moduleConfig[field.key]"
-              :placeholder="field.placeholder"
-              allow-clear
-            />
+            <div v-else-if="field.type === 'password'" class="field-with-hint">
+              <a-input-password
+                v-model="moduleConfig[field.key]"
+                :placeholder="field.placeholder"
+                allow-clear
+                @input="autoSave"
+              />
+              <div v-if="field.env_key" class="env-priority-hint">
+                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
+                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
+                </a-tag>
+                <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
+              </div>
+            </div>
             <!-- 数字输入 -->
             <a-input-number
               v-else-if="field.type === 'number'"
@@ -167,6 +187,7 @@
               :min="field.min"
               :max="field.max"
               style="width: 100%"
+              @change="autoSave"
             />
             <!-- 开关 -->
             <a-switch
@@ -174,12 +195,14 @@
               v-model="moduleConfig[field.key]"
               checked-text="是"
               unchecked-text="否"
+              @change="autoSave"
             />
             <!-- 下拉选择 -->
             <a-select
               v-else-if="field.type === 'select'"
               v-model="moduleConfig[field.key]"
               style="width: 100%"
+              @change="autoSave"
             >
               <a-option
                 v-for="opt in getFieldOptions(field)"
@@ -193,6 +216,7 @@
             <a-checkbox-group
               v-else-if="field.type === 'checkbox'"
               v-model="moduleConfig[field.key]"
+              @change="autoSave"
             >
               <a-checkbox
                 v-for="opt in getFieldOptions(field)"
@@ -205,7 +229,7 @@
             <!-- 文本列表 -->
             <div v-else-if="field.type === 'list'" class="list-editor">
               <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="list-item">
-                <a-input v-model="moduleConfig[field.key][i]" style="flex: 1" />
+                <a-input v-model="moduleConfig[field.key][i]" style="flex: 1" @input="autoSave" />
                 <a-button size="small" type="text" status="danger" @click="removeListItem(field.key, i)">
                   <template #icon><icon-delete /></template>
                 </a-button>
@@ -222,7 +246,8 @@
                   <a-input
                     v-model="item[subField.key]"
                     :placeholder="subField.placeholder || subField.label"
-                    :style="{ width: subField.width || 'auto', flex: subField.width ? 'none' : '1' }"
+                    :style="{ width: subField.width ? subField.width + 'px' : undefined, flex: subField.width ? undefined : 1 }"
+                    @input="autoSave"
                   />
                 </template>
                 <a-button size="small" type="text" status="danger" @click="removeArrayItem(field.key, i)">
@@ -240,6 +265,7 @@
               v-model="moduleConfig[field.key]"
               :placeholder="field.placeholder"
               allow-clear
+              @input="autoSave"
             />
             <div v-if="field.hint" class="field-hint">{{ field.hint }}</div>
           </a-form-item>
@@ -256,17 +282,20 @@
               v-if="typeof value === 'string'"
               v-model="moduleConfig[key]"
               allow-clear
+              @input="autoSave"
             />
             <a-input-number
               v-else-if="typeof value === 'number'"
               v-model="moduleConfig[key]"
               style="width: 100%"
+              @change="autoSave"
             />
             <a-switch
               v-else-if="typeof value === 'boolean'"
               v-model="moduleConfig[key]"
               checked-text="是"
               unchecked-text="否"
+              @change="autoSave"
             />
           </a-form-item>
         </template>
@@ -283,6 +312,14 @@
             保存配置
           </a-button>
         </div>
+
+        <!-- 自动保存悬浮提示 -->
+        <Transition name="save-toast">
+          <div v-if="saving || lastSaveTime" class="save-toast">
+            <span v-if="saving" class="save-toast-text">保存中...</span>
+            <span v-else class="save-toast-text success">已自动保存</span>
+          </div>
+        </Transition>
 
         <!-- 测试结果 -->
         <div v-if="testResult" class="test-result">
@@ -319,7 +356,14 @@ const saving = ref(false)
 const testing = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 const enabled = ref(true)
+const lastSaveTime = ref(false)
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+const envStatus = ref<Record<string, boolean>>({})
 const styleElement = ref<HTMLStyleElement | null>(null)
+
+function getEnvValue(envKey: string): boolean {
+  return envStatus.value[envKey] || false
+}
 
 // 定时任务配置
 const scheduleType = ref('none')
@@ -555,7 +599,8 @@ async function saveConfig() {
     const result = await moduleStore.saveModuleConfig(moduleName.value, configToSave)
 
     if (result.success) {
-      Message.success('配置已保存')
+      lastSaveTime.value = true
+      setTimeout(() => { lastSaveTime.value = false }, 2000)
     } else {
       Message.error('保存失败: ' + (result.error || '未知错误'))
     }
@@ -565,6 +610,15 @@ async function saveConfig() {
   } finally {
     saving.value = false
   }
+}
+
+function autoSave() {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+  }
+  saveTimer = setTimeout(() => {
+    saveConfig()
+  }, 500)
 }
 
 async function runTest() {
@@ -591,6 +645,12 @@ async function runTest() {
 async function loadConfig() {
   loading.value = true
   try {
+    // 加载环境变量配置状态
+    const envResult = await api.getEnvStatus()
+    if (envResult?.success && envResult.status) {
+      envStatus.value = envResult.status
+    }
+
     await moduleStore.loadModules()
     const cfg = await moduleStore.getModuleConfig(moduleName.value)
 
@@ -931,5 +991,61 @@ onUnmounted(() => {
 
 .test-result {
   margin-top: 16px;
+}
+
+.save-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: var(--color-bg-3);
+  border-radius: 6px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.save-toast-text {
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+
+.save-toast-text.success {
+  color: rgb(var(--green-6));
+}
+
+.save-toast-enter-active,
+.save-toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.save-toast-enter-from,
+.save-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+.env-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.env-hint-text {
+  font-size: 13px;
+  color: var(--color-text-3);
+}
+
+.field-with-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.env-priority-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>

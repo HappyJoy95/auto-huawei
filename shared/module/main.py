@@ -11,8 +11,16 @@ os.environ.setdefault("AUTO_CONTROLLER_ROOT", str(PROJECT_ROOT))
 os.environ.setdefault("AUTO_CONTROLLER_SHARED_ROOT", str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR))
 
+# 自动创建 .env：如果不存在则从 .env.example 复制
+env_file = PROJECT_ROOT / ".env"
+env_example = PROJECT_ROOT / ".env.example"
+if not env_file.exists() and env_example.exists():
+    import shutil
+    shutil.copy2(env_example, env_file)
+    print(f"[Init] 已从 .env.example 创建 .env，请编辑填入实际凭据")
+
 from dotenv import load_dotenv
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(env_file)
 
 import uvicorn
 from fastapi import FastAPI, HTTPException

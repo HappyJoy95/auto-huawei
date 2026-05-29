@@ -143,7 +143,11 @@ class DouyinTask(BaseTask):
             return TaskResult(
                 success=True,
                 message=f"采集完成，共 {len(posts)} 条视频，新增 {len(new_posts)} 条",
-                data={"total": len(posts), "new": len(new_posts)},
+                data={
+                    "total": len(posts),
+                    "new": len(new_posts),
+                    "store_names": list({p.store_name for p in new_posts if p.store_name}),
+                },
                 start_time=start_time,
                 end_time=datetime.now(),
                 notify_title=notify_title,
@@ -191,20 +195,18 @@ class DouyinTask(BaseTask):
         )
 
         lines = [
-            "📊 抖音采集完成",
-            "━━━━━━━━━━━━━━━━━━━",
-            f"本次新增：{len(new_posts)}条 | 当前累计：{total_posts}条 | 新增获赞：{total_likes}",
+            f"**本次新增：**{len(new_posts)}条 | **累计：**{total_posts}条 | **新增获赞：**{total_likes}",
         ]
 
         if top:
-            lines.extend(["", "🏆 TOP门店"])
+            lines.extend(["", "**TOP门店**"])
             for index, item in enumerate(top, 1):
-                lines.append(f"{index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
+                lines.append(f"> {index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
 
         if zero_stores:
             shown = "、".join(zero_stores[:8])
             extra = f" 等{len(zero_stores)}家" if len(zero_stores) > 8 else ""
-            lines.extend(["", f"⚠️ 本次零新增：{shown}{extra}"])
+            lines.extend(["", f"**零新增：**{shown}{extra}"])
 
-        lines.append(f"\n⏰ {datetime.now().strftime('%m-%d %H:%M')}")
+        lines.append(f"\n_{datetime.now().strftime('%m-%d %H:%M')}_")
         return "\n".join(lines)

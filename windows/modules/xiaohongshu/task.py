@@ -143,20 +143,18 @@ class XiaohongshuTask(BaseTask):
         total_likes = sum(data["likes"] for data in stats.values())
 
         lines = [
-            "📊 小红书采集完成",
-            "━━━━━━━━━━━━━━━━━━━",
-            f"上周新增：{len(report_posts)}条 | 本次采集：{total_posts}条 | 上周获赞：{total_likes}",
+            f"**上周新增：**{len(report_posts)}条 | **本次采集：**{total_posts}条 | **上周获赞：**{total_likes}",
         ]
 
         if top:
-            lines.extend(["", "🏆 TOP门店"])
+            lines.extend(["", "**TOP门店**"])
             for index, item in enumerate(top, 1):
-                lines.append(f"{index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
+                lines.append(f"> {index}. {item['name']} - {item['count']}条 / {item['likes']}赞")
 
         if zero_stores:
             shown = "、".join(zero_stores[:8])
             extra = f" 等{len(zero_stores)}家" if len(zero_stores) > 8 else ""
-            lines.extend(["", f"⚠️ 上周零新增：{shown}{extra}"])
+            lines.extend(["", f"**零新增：**{shown}{extra}"])
 
-        lines.append(f"\n⏰ {datetime.now().strftime('%m-%d %H:%M')}")
+        lines.append(f"\n_{datetime.now().strftime('%m-%d %H:%M')}_")
         return "\n".join(lines)
