@@ -62,12 +62,6 @@ fields:
     show_if: "notify_enabled"
     placeholder: "接收人userid，多人用|分隔，如 zhangsan|lisi"
 
-  - key: wechat_app_store_field
-    label: 门店字段名
-    type: text
-    show_if: "notify_enabled"
-    default: "store_names"
-    placeholder: "结果数据中门店名的字段名，默认 store_names"
 
   - key: notify_email_target
     label: 邮箱接收人
