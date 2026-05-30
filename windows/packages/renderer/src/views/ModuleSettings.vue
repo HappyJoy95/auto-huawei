@@ -151,7 +151,8 @@
             v-show="!isNotifyTargetHidden(field)"
           >
             <!-- 文本输入 -->
-            <div v-else-if="field.type === 'text'" class="field-with-hint">
+            <template v-if="field.type === 'text'">
+            <div class="field-with-hint">
               <a-input
                 v-model="moduleConfig[field.key]"
                 :placeholder="field.placeholder"
@@ -165,8 +166,10 @@
                 <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
               </div>
             </div>
+            </template>
             <!-- 密码输入 -->
-            <div v-else-if="field.type === 'password'" class="field-with-hint">
+            <template v-else-if="field.type === 'password'">
+            <div class="field-with-hint">
               <a-input-password
                 v-model="moduleConfig[field.key]"
                 :placeholder="field.placeholder"
@@ -180,7 +183,9 @@
                 <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
               </div>
             </div>
+            </template>
             <!-- 数字输入 -->
+            <template v-else-if="field.type === 'number'>
             <a-input-number
               v-else-if="field.type === 'number'"
               v-model="moduleConfig[field.key]"
@@ -189,15 +194,19 @@
               style="width: 100%"
               @change="autoSave"
             />
+            </template>
             <!-- 开关 -->
+            <template v-else-if="field.type === 'switch'>
             <a-switch
               v-else-if="field.type === 'switch'"
               v-model="moduleConfig[field.key]"
               checked-text="是"
               unchecked-text="否"
               @change="autoSave"
+            </template>
             />
             <!-- 下拉选择 -->
+            <template v-else-if="field.type === 'select'>
             <a-select
               v-else-if="field.type === 'select'"
               v-model="moduleConfig[field.key]"
@@ -211,8 +220,10 @@
               >
                 {{ opt.label }}
               </a-option>
+            </template>
             </a-select>
             <!-- 复选框组 -->
+            <template v-else-if="field.type === 'checkbox'>
             <a-checkbox-group
               v-else-if="field.type === 'checkbox'"
               v-model="moduleConfig[field.key]"
@@ -226,6 +237,7 @@
                 {{ opt.label }}
               </a-checkbox>
             </a-checkbox-group>
+            </template>
             <!-- 文本列表 -->
             <div v-else-if="field.type === 'list'" class="list-editor">
               <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="list-item">
