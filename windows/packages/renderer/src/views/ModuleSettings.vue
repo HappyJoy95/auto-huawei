@@ -151,135 +151,90 @@
             v-show="!isNotifyTargetHidden(field)"
           >
             <!-- 文本输入 -->
-            <template v-if="field.type === 'text'">
-            <div class="field-with-hint">
-              <a-input
-                v-model="moduleConfig[field.key]"
-                :placeholder="field.placeholder"
-                allow-clear
-                @input="autoSave"
-              />
-              <div v-if="field.env_key" class="env-priority-hint">
-                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-                </a-tag>
-                <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
-              </div>
-            </div>
-            </template>
-            <!-- 密码输入 -->
-            <template v-else-if="field.type === 'password'">
-            <div class="field-with-hint">
-              <a-input-password
-                v-model="moduleConfig[field.key]"
-                :placeholder="field.placeholder"
-                allow-clear
-                @input="autoSave"
-              />
-              <div v-if="field.env_key" class="env-priority-hint">
-                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-                </a-tag>
-                <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
-              </div>
-            </div>
-            </template>
-            <!-- 数字输入 -->
-            <template v-else-if="field.type === 'number'>
-            <a-input-number
-              v-else-if="field.type === 'number'"
-              v-model="moduleConfig[field.key]"
-              :min="field.min"
-              :max="field.max"
-              style="width: 100%"
-              @change="autoSave"
-            />
-            </template>
-            <!-- 开关 -->
-            <template v-else-if="field.type === 'switch'>
-            <a-switch
-              v-else-if="field.type === 'switch'"
-              v-model="moduleConfig[field.key]"
-              checked-text="是"
-              unchecked-text="否"
-              @change="autoSave"
-            </template>
-            />
-            <!-- 下拉选择 -->
-            <template v-else-if="field.type === 'select'>
-            <a-select
-              v-else-if="field.type === 'select'"
-              v-model="moduleConfig[field.key]"
-              style="width: 100%"
-              @change="autoSave"
-            >
-              <a-option
-                v-for="opt in getFieldOptions(field)"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </a-option>
-            </template>
-            </a-select>
-            <!-- 复选框组 -->
-            <template v-else-if="field.type === 'checkbox'>
-            <a-checkbox-group
-              v-else-if="field.type === 'checkbox'"
-              v-model="moduleConfig[field.key]"
-              @change="autoSave"
-            >
-              <a-checkbox
-                v-for="opt in getFieldOptions(field)"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </a-checkbox>
-            </a-checkbox-group>
-            </template>
-            <!-- 文本列表 -->
-            <div v-else-if="field.type === 'list'" class="list-editor">
-              <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="list-item">
-                <a-input v-model="moduleConfig[field.key][i]" style="flex: 1" @input="autoSave" />
-                <a-button size="small" type="text" status="danger" @click="removeListItem(field.key, i)">
-                  <template #icon><icon-delete /></template>
-                </a-button>
-              </div>
-              <a-button size="small" type="dashed" @click="addListItem(field.key)">
-                <template #icon><icon-plus /></template>
-                添加
-              </a-button>
-            </div>
-            <!-- 对象列表 -->
-            <div v-else-if="field.type === 'object_list'" class="array-editor">
-              <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="array-item">
-                <template v-for="subField in field.fields" :key="subField.key">
-                  <a-input
-                    v-model="item[subField.key]"
-                    :placeholder="subField.placeholder || subField.label"
-                    :style="{ width: subField.width ? subField.width + 'px' : undefined, flex: subField.width ? undefined : 1 }"
-                    @input="autoSave"
-                  />
-                </template>
-                <a-button size="small" type="text" status="danger" @click="removeArrayItem(field.key, i)">
-                  <template #icon><icon-delete /></template>
-                </a-button>
-              </div>
-              <a-button size="small" type="dashed" @click="addArrayItem(field.key, field.fields)">
-                <template #icon><icon-plus /></template>
-                添加
-              </a-button>
-            </div>
-            <!-- 默认文本 -->
-            <a-input
-              v-else
-              v-model="moduleConfig[field.key]"
-              :placeholder="field.placeholder"
-              allow-clear
-              @input="autoSave"
-            />
-            <div v-if="field.hint" class="field-hint">{{ field.hint }}</div>
+<template v-if="field.type === 'text'">
+<div class="field-with-hint">
+  <a-input v-model="moduleConfig[field.key]" :placeholder="field.placeholder" allow-clear style="flex: 1" @input="autoSave" />
+  <div v-if="field.env_key" class="env-priority-hint">
+    <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
+      {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
+    </a-tag>
+    <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
+  </div>
+</div>
+</template>
+<!-- 密码输入 -->
+<template v-else-if="field.type === 'password'">
+<div class="field-with-hint">
+  <a-input-password v-model="moduleConfig[field.key]" :placeholder="field.placeholder" allow-clear style="width: 100%" @input="autoSave" />
+  <div v-if="field.env_key" class="env-priority-hint">
+    <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
+      {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
+    </a-tag>
+    <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
+  </div>
+</div>
+</template>
+<!-- 数字输入 -->
+<template v-else-if="field.type === 'number'">
+<a-input-number v-model="moduleConfig[field.key]" :min="field.min" :max="field.max" style="width: 100%" @change="autoSave" />
+</template>
+<!-- 开关 -->
+<template v-else-if="field.type === 'switch'">
+<a-switch v-model="moduleConfig[field.key]" checked-text="是" unchecked-text="否" @change="autoSave" />
+</template>
+<!-- 下拉选择 -->
+<template v-else-if="field.type === 'select'">
+<a-select v-model="moduleConfig[field.key]" style="width: 100%" @change="autoSave">
+  <a-option v-for="opt in getFieldOptions(field)" :key="opt.value" :value="opt.value">
+    {{ opt.label }}
+  </a-option>
+</a-select>
+</template>
+<!-- 复选框组 -->
+<template v-else-if="field.type === 'checkbox'">
+<a-checkbox-group v-model="moduleConfig[field.key]" @change="autoSave">
+  <a-checkbox v-for="opt in getFieldOptions(field)" :key="opt.value" :value="opt.value">
+    {{ opt.label }}
+  </a-checkbox>
+</a-checkbox-group>
+</template>
+<!-- 文本列表 -->
+<template v-else-if="field.type === 'list'">
+<div class="list-editor">
+  <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="list-item">
+    <a-input v-model="moduleConfig[field.key][i]" style="flex: 1" @input="autoSave" />
+    <a-button size="small" type="text" status="danger" @click="removeListItem(field.key, i)">
+      <template #icon><icon-delete /></template>
+    </a-button>
+  </div>
+  <a-button size="small" type="dashed" @click="addListItem(field.key)">
+    <template #icon><icon-plus /></template>
+    添加
+  </a-button>
+</div>
+</template>
+<!-- 对象列表 -->
+<template v-else-if="field.type === 'object_list'">
+<div class="array-editor">
+  <div v-for="(item, i) in (moduleConfig[field.key] || [])" :key="i" class="array-item">
+    <template v-for="subField in field.fields" :key="subField.key">
+      <a-input v-model="item[subField.key]" :placeholder="subField.placeholder || subField.label" :style="{ width: subField.width ? subField.width + 'px' : undefined, flex: subField.width ? undefined : 1 }" @input="autoSave" />
+    </template>
+    <a-button size="small" type="text" status="danger" @click="removeArrayItem(field.key, i)">
+      <template #icon><icon-delete /></template>
+    </a-button>
+  </div>
+  <a-button size="small" type="dashed" @click="addArrayItem(field.key, field.fields)">
+    <template #icon><icon-plus /></template>
+    添加
+  </a-button>
+</div>
+</template>
+<!-- 默认文本 -->
+<template v-else>
+<a-input v-model="moduleConfig[field.key]" :placeholder="field.placeholder" allow-clear style="width: 100%" @input="autoSave" />
+</template>
+<div v-if="field.hint" class="field-hint">{{ field.hint }}</div>
           </a-form-item>
         </template>
 
