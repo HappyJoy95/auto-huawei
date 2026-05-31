@@ -239,8 +239,6 @@ const waitingTasks = computed(() =>
   }))
 )
 
-const userSelectedPool = ref(false)
-
 function selectPool(pool: PoolType) {
   activePool.value = pool
   userSelectedPool.value = true
