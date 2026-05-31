@@ -6,6 +6,25 @@ echo   Auto Controller Starting (Windows)
 echo ========================================
 echo.
 
+:: Build validation
+set NEED_BUILD=0
+if not exist "packages\main\dist\main.cjs" set NEED_BUILD=1
+if not exist "packages\preload\dist\index.cjs" set NEED_BUILD=1
+if not exist "packages\renderer\dist\index.html" set NEED_BUILD=1
+
+if "%NEED_BUILD%"=="1" (
+    echo [Build] Missing build output, running npm run build...
+    call npm run build
+    if errorlevel 1 (
+        echo [Build] Failed. Please fix the build errors above.
+        pause
+        exit /b 1
+    )
+) else (
+    echo [Build] Existing build output found, skipping npm run build
+)
+echo.
+
 :: Kill old processes (ONLY project-related ones)
 echo [Cleanup] Closing old project processes...
 

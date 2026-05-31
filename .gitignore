@@ -56,6 +56,7 @@ data/
 # 凭据和敏感配置（包含密码、token、webhook 等）
 **/config/config.yaml
 **/config/tasks.yaml
+**/config/stores.yaml
 **/config.json
 **/modules/*/config.json
 **/modules/*/config.yaml

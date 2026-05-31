@@ -145,42 +145,6 @@
         <div class="form-hint">
           在企业微信管理后台创建自建应用，获取 CorpID、AgentId 和 Secret
         </div>
-        <a-divider />
-        <a-form-item label="门店→接收人映射">
-          <div class="target-mapping">
-            <div v-for="(contact, cIdx) in targetContacts" :key="cIdx" class="target-contact">
-              <div class="target-contact-header">
-                <a-input v-model="contact.userid" placeholder="userid" style="width: 30%" @input="syncTargetContacts" />
-                <a-input v-model="contact.name" placeholder="姓名" style="width: 20%" @input="syncTargetContacts" />
-                <a-button type="text" status="danger" @click="removeTargetContact(cIdx)">
-                  <icon-delete />
-                </a-button>
-              </div>
-              <div class="target-aliases">
-                <span class="alias-label">别名：</span>
-                <a-tag v-for="(alias, aIdx) in contact.aliases" :key="aIdx" closable @close="removeAlias(cIdx, aIdx)">
-                  {{ alias }}
-                </a-tag>
-                <a-input
-                  v-if="contact.addingAlias"
-                  size="mini"
-                  style="width: 120px"
-                  v-model="contact.newAlias"
-                  @blur="confirmAlias(cIdx)"
-                  @keydown-enter="confirmAlias(cIdx)"
-                  autofocus
-                />
-                <a-button v-else type="dashed" size="mini" @click="startAddAlias(cIdx)">
-                  <icon-plus /> 添加别名
-                </a-button>
-              </div>
-            </div>
-            <a-button type="dashed" long @click="addTargetContact">
-              <icon-plus /> 添加联系人
-            </a-button>
-          </div>
-          <span class="form-hint">同一门店在不同模块可能叫不同名字，添加所有别名即可自动匹配</span>
-        </a-form-item>
         <div class="email-test-section">
           <a-button type="outline" @click="testWechatApp" :loading="testingWechatApp">
             发送测试消息
@@ -188,6 +152,58 @@
           <span v-if="testWechatAppResult" :class="['test-result', testWechatAppSuccess ? 'success' : 'error']">
             {{ testWechatAppResult }}
           </span>
+        </div>
+      </a-card>
+
+      <!-- 门店信息管理 -->
+      <a-card class="config-card">
+        <template #title>
+          <a-space>
+            <span>门店信息管理</span>
+            <a-tag color="blue">{{ stores.length }} 个门店</a-tag>
+          </a-space>
+        </template>
+        <template #extra>
+          <a-space>
+            <a-button type="primary" @click="showAddStore">
+              <template #icon><icon-plus /></template>
+              添加门店
+            </a-button>
+            <a-button @click="saveStores" :loading="savingStores">保存门店</a-button>
+          </a-space>
+        </template>
+
+        <a-table :data="stores" :pagination="{ pageSize: 10 }" :scroll="{ x: 900 }">
+          <template #columns>
+            <a-table-column title="门店名称" data-index="name" :width="220" />
+            <a-table-column title="简称" data-index="short_name" :width="120" />
+            <a-table-column title="门店代码" data-index="code" :width="120" />
+            <a-table-column title="企微接收人" data-index="wechat_userids" :width="180">
+              <template #cell="{ record }">
+                <span v-if="record.wechat_userids?.length">{{ record.wechat_userids.join(', ') }}</span>
+                <span v-else class="empty-text">-</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="别称" data-index="aliases" :width="180">
+              <template #cell="{ record }">
+                <span v-if="record.aliases?.length">{{ record.aliases.join(', ') }}</span>
+                <span v-else class="empty-text">-</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="操作" :width="140" fixed="right">
+              <template #cell="{ rowIndex }">
+                <a-space>
+                  <a-button size="small" @click="editStore(rowIndex)">编辑</a-button>
+                  <a-popconfirm content="确定删除？" @ok="deleteStore(rowIndex)">
+                    <a-button size="small" status="danger">删除</a-button>
+                  </a-popconfirm>
+                </a-space>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+        <div class="form-hint store-hint">
+          门店代码供巡检模块使用；企微接收人和别称供企业微信应用按门店匹配推送使用。
         </div>
       </a-card>
 
@@ -214,6 +230,32 @@
         </a-row>
       </a-card>
     </a-form>
+
+    <a-modal v-model:visible="storeModalVisible" :title="editingStoreIndex >= 0 ? '编辑门店' : '添加门店'" @ok="saveStore" @cancel="closeStoreModal" :width="520">
+      <a-form :model="editingStore" layout="vertical">
+        <a-form-item label="门店名称" required>
+          <a-input v-model="editingStore.name" placeholder="杭州萧山机场华为授权体验店" />
+        </a-form-item>
+        <a-form-item label="简称">
+          <a-input v-model="editingStore.short_name" placeholder="萧山机场店" />
+        </a-form-item>
+        <a-form-item label="门店代码">
+          <a-input v-model="editingStore.code" placeholder="SCN123456" />
+        </a-form-item>
+        <a-form-item label="企微接收人">
+          <a-input-tag v-model="editingStore.wechat_userids" placeholder="输入 userid 后回车添加" />
+          <template #extra>
+            <span class="form-hint">企业微信应用推送时的接收人 userid</span>
+          </template>
+        </a-form-item>
+        <a-form-item label="别称">
+          <a-input-tag v-model="editingStore.aliases" placeholder="输入别称后回车添加" />
+          <template #extra>
+            <span class="form-hint">用于匹配订单、巡检、月报等模块中的门店名</span>
+          </template>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -247,71 +289,98 @@ const config = reactive({
   wechat_corpid: '',
   wechat_corpsecret: '',
   wechat_agentid: '',
-  wechat_app_targets: {} as Record<string, any>,
   log_level: 'info',
   log_retention: 7
 })
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
-// 门店→接收人映射表（UI 用数组，保存时转对象）
-interface TargetContact {
-  userid: string
+interface StoreInfo {
   name: string
+  short_name: string
+  code: string
+  wechat_userids: string[]
   aliases: string[]
-  addingAlias: boolean
-  newAlias: string
-}
-const targetContacts = ref<TargetContact[]>([])
-
-function initTargetContacts(targets: Record<string, any>) {
-  targetContacts.value = Object.entries(targets).map(([userid, info]) => ({
-    userid,
-    name: typeof info === 'object' ? (info.name || '') : '',
-    aliases: typeof info === 'object' ? (info.aliases || []) : [info],
-    addingAlias: false,
-    newAlias: ''
-  }))
 }
 
-function syncTargetContacts() {
-  const obj: Record<string, any> = {}
-  for (const c of targetContacts.value) {
-    if (c.userid) {
-      obj[c.userid] = { name: c.name || '', aliases: c.aliases.filter(a => a) }
+const stores = ref<StoreInfo[]>([])
+const savingStores = ref(false)
+const storeModalVisible = ref(false)
+const editingStoreIndex = ref(-1)
+const editingStore = reactive<StoreInfo>({
+  name: '',
+  short_name: '',
+  code: '',
+  wechat_userids: [],
+  aliases: []
+})
+
+function resetEditingStore() {
+  Object.assign(editingStore, { name: '', short_name: '', code: '', wechat_userids: [], aliases: [] })
+}
+
+async function loadStores() {
+  try {
+    const result = await api.getStores()
+    stores.value = (result?.stores || []).map((store: Partial<StoreInfo>) => ({
+      name: store.name || '',
+      short_name: store.short_name || '',
+      code: store.code || '',
+      wechat_userids: Array.isArray(store.wechat_userids) ? store.wechat_userids : [],
+      aliases: Array.isArray(store.aliases) ? store.aliases : []
+    }))
+  } catch (e) {
+    console.error('加载门店失败:', e)
+  }
+}
+
+function showAddStore() {
+  editingStoreIndex.value = -1
+  resetEditingStore()
+  storeModalVisible.value = true
+}
+
+function editStore(index: number) {
+  editingStoreIndex.value = index
+  Object.assign(editingStore, JSON.parse(JSON.stringify(stores.value[index])))
+  storeModalVisible.value = true
+}
+
+function closeStoreModal() {
+  storeModalVisible.value = false
+}
+
+function saveStore() {
+  if (!editingStore.name.trim()) {
+    Message.warning('请输入门店名称')
+    return
+  }
+
+  const store = JSON.parse(JSON.stringify(editingStore))
+  if (editingStoreIndex.value >= 0) {
+    stores.value[editingStoreIndex.value] = store
+  } else {
+    stores.value.push(store)
+  }
+  storeModalVisible.value = false
+}
+
+function deleteStore(index: number) {
+  stores.value.splice(index, 1)
+}
+
+async function saveStores() {
+  savingStores.value = true
+  try {
+    const result = await api.saveStores({ stores: stores.value })
+    if (result?.success) {
+      Message.success('门店信息已保存')
     }
+  } catch (e) {
+    Message.error('门店信息保存失败')
+  } finally {
+    savingStores.value = false
   }
-  config.wechat_app_targets = obj
-  autoSave()
-}
-
-function addTargetContact() {
-  targetContacts.value.push({ userid: '', name: '', aliases: [], addingAlias: false, newAlias: '' })
-}
-
-function removeTargetContact(index: number) {
-  targetContacts.value.splice(index, 1)
-  syncTargetContacts()
-}
-
-function startAddAlias(cIdx: number) {
-  targetContacts.value[cIdx].addingAlias = true
-  targetContacts.value[cIdx].newAlias = ''
-}
-
-function confirmAlias(cIdx: number) {
-  const contact = targetContacts.value[cIdx]
-  if (contact.newAlias && !contact.aliases.includes(contact.newAlias)) {
-    contact.aliases.push(contact.newAlias)
-  }
-  contact.addingAlias = false
-  contact.newAlias = ''
-  syncTargetContacts()
-}
-
-function removeAlias(cIdx: number, aIdx: number) {
-  targetContacts.value[cIdx].aliases.splice(aIdx, 1)
-  syncTargetContacts()
 }
 
 async function loadConfig() {
@@ -319,7 +388,6 @@ async function loadConfig() {
     const result = await api.getGeneralConfig()
     if (result?.success && result.config) {
       Object.assign(config, result.config)
-      initTargetContacts(config.wechat_app_targets || {})
     }
   } catch (e) {
     console.error('加载配置失败:', e)
@@ -398,6 +466,7 @@ async function testWechatApp() {
 
 onMounted(() => {
   loadConfig()
+  loadStores()
 })
 </script>
 
@@ -470,6 +539,15 @@ onMounted(() => {
   margin-left: 12px;
   color: var(--color-text-3);
   font-size: 12px;
+}
+
+.store-hint {
+  margin-top: 12px;
+  margin-left: 0;
+}
+
+.empty-text {
+  color: var(--color-text-4);
 }
 
 .email-test-section {

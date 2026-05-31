@@ -59,5 +59,6 @@ data/
 config/general.yaml
 config/config.yaml
 config/tasks.yaml
+config/stores.yaml
 modules/*/config.json
 modules/*/config.yaml

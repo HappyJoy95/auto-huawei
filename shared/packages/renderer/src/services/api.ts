@@ -81,6 +81,19 @@ export async function testNotify(channel: string, target: string, mock: boolean 
   })
 }
 
+// ===== 门店 API =====
+
+export async function getStores() {
+  return request('/stores')
+}
+
+export async function saveStores(data: { stores: any[] }) {
+  return request('/stores', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
 // ===== 日志 API =====
 
 export async function getLogs(limit: number = 100) {
