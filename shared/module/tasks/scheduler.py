@@ -291,6 +291,10 @@ class TaskQueueScheduler:
         """执行任务"""
         task = self.task_instances.get(module_name)
         if not task:
+            # 清理可能存在的脏状态
+            with self._lock:
+                self.running_tasks.pop(module_name, None)
+                self.running_task_pool_types.pop(module_name, None)
             return
 
         is_test = getattr(task, '_run_mode', 'normal') == 'test'

@@ -171,10 +171,8 @@
                   <span v-if="moduleConfig['notify_sync_enabled']" class="sync-hint">同时推门店负责人</span>
                 </template>
               </div>
-              <div v-if="field.env_key" class="env-priority-hint">
-                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-                </a-tag>
+              <div v-if="field.env_key && getEnvValue(field.env_key)" class="env-priority-hint">
+                <a-tag size="small" color="green">.env 优先</a-tag>
                 <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
               </div>
             </div>
@@ -186,10 +184,8 @@
                 allow-clear
                 @input="autoSave"
               />
-              <div v-if="field.env_key" class="env-priority-hint">
-                <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-                  {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-                </a-tag>
+              <div v-if="field.env_key && getEnvValue(field.env_key)" class="env-priority-hint">
+                <a-tag size="small" color="green">.env 优先</a-tag>
                 <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
               </div>
             </div>

@@ -171,6 +171,7 @@ const logs = ref<Array<{ time: string; level: string; msg: string }>>([])
 // 调度器状态
 const schedulerRunning = ref(false)
 const activePool = ref<PoolType>('simulator')
+const userSelectedPool = ref(false)
 const pools = ref<Record<PoolType, PoolStatus>>({
   simulator: createEmptyPoolStatus(),
   browser: createEmptyPoolStatus(),
@@ -238,11 +239,19 @@ const waitingTasks = computed(() =>
   }))
 )
 
+const userSelectedPool = ref(false)
+
 function selectPool(pool: PoolType) {
   activePool.value = pool
+  userSelectedPool.value = true
 }
 
 function updateActivePool() {
+  // 用户手动选择过池子后，不再自动切换
+  if (userSelectedPool.value) {
+    return
+  }
+
   const current = pools.value[activePool.value]
   if (current.running_now.length > 0 || current.queue.length > 0) {
     return

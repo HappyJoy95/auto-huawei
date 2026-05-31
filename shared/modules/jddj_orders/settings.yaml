@@ -5,14 +5,12 @@ fields:
     type: text
     placeholder: "登录用户名"
     env_key: JDDJ_USERNAME
-    hint: "也可在 .env 中配置 JDDJ_USERNAME（优先）"
 
   - key: password
     label: 密码
     type: password
     placeholder: "登录密码"
     env_key: JDDJ_PASSWORD
-    hint: "也可在 .env 中配置 JDDJ_PASSWORD（优先）"
 
   - key: status_options
     label: 订单状态选项

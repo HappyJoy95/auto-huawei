@@ -154,10 +154,8 @@
 <template v-if="field.type === 'text'">
 <div class="field-with-hint">
   <a-input v-model="moduleConfig[field.key]" :placeholder="field.placeholder" allow-clear style="flex: 1" @input="autoSave" />
-  <div v-if="field.env_key" class="env-priority-hint">
-    <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-      {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-    </a-tag>
+  <div v-if="field.env_key && getEnvValue(field.env_key)" class="env-priority-hint">
+    <a-tag size="small" color="green">.env 优先</a-tag>
     <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
   </div>
 </div>
@@ -166,10 +164,8 @@
 <template v-else-if="field.type === 'password'">
 <div class="field-with-hint">
   <a-input-password v-model="moduleConfig[field.key]" :placeholder="field.placeholder" allow-clear style="width: 100%" @input="autoSave" />
-  <div v-if="field.env_key" class="env-priority-hint">
-    <a-tag size="small" :color="getEnvValue(field.env_key) ? 'green' : ''">
-      {{ getEnvValue(field.env_key) ? '.env 优先' : '' }}
-    </a-tag>
+  <div v-if="field.env_key && getEnvValue(field.env_key)" class="env-priority-hint">
+    <a-tag size="small" color="green">.env 优先</a-tag>
     <span v-if="field.hint" class="env-hint-text">{{ field.hint }}</span>
   </div>
 </div>
