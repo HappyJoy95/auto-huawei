@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
+from cloakbrowser import launch, launch_persistent_context
+from playwright.sync_api import Browser, Page, BrowserContext
 
 
 @dataclass
@@ -42,7 +43,6 @@ class DouyinWebScraper:
     def __init__(self, adb_port: str = None, headless: bool = False,
                  cookies_file: str = None, user_data_dir: str = None):
         self.headless = headless
-        self.playwright = None
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
@@ -58,19 +58,12 @@ class DouyinWebScraper:
         Path(self.user_data_dir).mkdir(parents=True, exist_ok=True)
 
     def _init_browser(self):
-        """初始化浏览器 - 使用Edge"""
-        if self.playwright is None:
-            self.playwright = sync_playwright().start()
-
+        """初始化浏览器 - 使用 CloakBrowser"""
         if self.browser is None:
-            # 使用 Edge 浏览器
-            self.browser = self.playwright.chromium.launch(
+            # 使用 CloakBrowser 启动浏览器
+            self.browser = launch(
                 headless=self.headless,
-                channel='msedge',  # 使用 Microsoft Edge
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--start-maximized',
-                ]
+                humanize=True,  # 自动模拟人类行为
             )
 
         if self.context is None:
@@ -666,8 +659,6 @@ class DouyinWebScraper:
                 self.context.close()
             if self.browser:
                 self.browser.close()
-            if self.playwright:
-                self.playwright.stop()
             print("浏览器已关闭")
         except Exception as e:
             print(f"关闭浏览器时出错: {e}")

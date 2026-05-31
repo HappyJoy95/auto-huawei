@@ -8,7 +8,8 @@ from pathlib import Path
 from datetime import datetime
 import json
 import re
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
+from cloakbrowser import launch, launch_persistent_context
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 JDDJ_DATA_DIR = DATA_DIR / "jddj_orders"
 
@@ -36,42 +37,41 @@ class JddjOrdersTask(BaseTask):
             self.log("INFO", f"京东到家配置: headless={headless}")
             self.update_progress(10, "启动浏览器...")
 
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=headless)
-                try:
-                    context = browser.new_context(accept_downloads=True)
-                    page = context.new_page()
+            browser = launch(headless=headless, humanize=True)
+            try:
+                context = browser.new_context(accept_downloads=True)
+                page = context.new_page()
 
-                    if cookies_file.exists():
-                        with open(cookies_file, "r", encoding="utf-8") as f:
-                            cookies = json.load(f)
-                        if cookies:
-                            context.add_cookies(cookies)
-                            self.log("INFO", "已加载 cookies")
+                if cookies_file.exists():
+                    with open(cookies_file, "r", encoding="utf-8") as f:
+                        cookies = json.load(f)
+                    if cookies:
+                        context.add_cookies(cookies)
+                        self.log("INFO", "已加载 cookies")
 
-                    self.update_progress(20, "访问京东到家...")
-                    page.goto("https://store.jddj.com/", wait_until="domcontentloaded", timeout=60000)
+                self.update_progress(20, "访问京东到家...")
+                page.goto("https://store.jddj.com/", wait_until="domcontentloaded", timeout=60000)
 
-                    if self._needs_login(page):
-                        self.update_progress(30, "等待登录完成...")
-                        self._login(page, username, password, headless)
-                    else:
-                        self.log("INFO", "cookies 登录状态有效")
+                if self._needs_login(page):
+                    self.update_progress(30, "等待登录完成...")
+                    self._login(page, username, password, headless)
+                else:
+                    self.log("INFO", "cookies 登录状态有效")
 
-                    if self._needs_login(page):
-                        raise RuntimeError("登录未完成，无法继续获取订单")
+                if self._needs_login(page):
+                    raise RuntimeError("登录未完成，无法继续获取订单")
 
-                    with open(cookies_file, "w", encoding="utf-8") as f:
-                        json.dump(context.cookies(), f, ensure_ascii=False, indent=2)
+                with open(cookies_file, "w", encoding="utf-8") as f:
+                    json.dump(context.cookies(), f, ensure_ascii=False, indent=2)
 
-                    self.update_progress(50, "正在打开订单页面...")
-                    page.goto("https://store.jddj.com/frame/347/3065", wait_until="domcontentloaded", timeout=60000)
-                    self._wait_for_order_page(page, target_status)
+                self.update_progress(50, "正在打开订单页面...")
+                page.goto("https://store.jddj.com/frame/347/3065", wait_until="domcontentloaded", timeout=60000)
+                self._wait_for_order_page(page, target_status)
 
-                    self.update_progress(70, "正在解析订单...")
-                    orders = self._get_orders(page, target_status)
-                finally:
-                    browser.close()
+                self.update_progress(70, "正在解析订单...")
+                orders = self._get_orders(page, target_status)
+            finally:
+                browser.close()
 
             pending_orders = [o for o in orders if o["状态"] in target_status]
             result = {
