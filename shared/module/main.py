@@ -27,7 +27,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from module.api.routes import task, config, data, modules, scheduler
+from module.api.routes import task, config, data, modules, scheduler, stores
 from module.tasks.scheduler import TaskQueueScheduler, set_scheduler, get_logs
 from module.config.config import Config
 
@@ -92,6 +92,7 @@ app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(data.router, prefix="/api/data", tags=["data"])
 app.include_router(modules.router, prefix="/api/modules", tags=["modules"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
+app.include_router(stores.router, prefix="/api/stores", tags=["stores"])
 
 
 @app.get("/api/health")

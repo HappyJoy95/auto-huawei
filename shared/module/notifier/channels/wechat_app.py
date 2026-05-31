@@ -5,7 +5,7 @@
 import os
 import time
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from .base import BaseChannel
 from module.utils.paths import get_project_root
 import yaml
@@ -30,6 +30,16 @@ class WechatAppChannel(BaseChannel):
         return {}
 
     @classmethod
+    def get_stores_config(cls) -> List[Dict[str, Any]]:
+        """获取门店配置"""
+        stores_file = get_project_root() / "config" / "stores.yaml"
+        if stores_file.exists():
+            with open(stores_file, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+                return data.get("stores", [])
+        return []
+
+    @classmethod
     def _get_app_config(cls) -> tuple:
         """获取企业微信应用配置（环境变量优先，回退到 general.yaml）"""
         global_config = cls.get_global_config()
@@ -39,18 +49,44 @@ class WechatAppChannel(BaseChannel):
         return corpid, corpsecret, agentid
 
     @classmethod
+    def _build_alias_index_from_stores(cls) -> Dict[str, List[str]]:
+        """
+        从 stores.yaml 构建门店名→userid列表 的映射
+        """
+        stores = cls.get_stores_config()
+        index: Dict[str, List[str]] = {}
+        for store in stores:
+            userids = store.get("wechat_userids", [])
+            if not userids:
+                continue
+
+            # 门店名称
+            name = store.get("name")
+            if name:
+                index[name] = userids
+
+            # 简称
+            short_name = store.get("short_name")
+            if short_name:
+                index[short_name] = userids
+
+            # 别称
+            for alias in store.get("aliases", []):
+                if alias:
+                    index[alias] = userids
+
+        return index
+
+    @classmethod
     def _build_alias_index(cls, targets_map: Dict) -> Dict[str, list]:
         """
         构建别名→userid列表 的倒排索引（一个门店可对应多个负责人）
-        targets_map 格式:
-          { "zhangsan": {"name": "张三", "aliases": ["萧山机场店", "华为专营店(和达中心城店)"]}, ... }
-        也兼容旧格式:
-          { "萧山机场店": "zhangsan", ... }
+        兼容旧格式 general.yaml 中的 wechat_app_targets
         """
         index: Dict[str, list] = {}
         for key, value in targets_map.items():
             if isinstance(value, dict):
-                # 新格式: userid → {name, aliases}
+                # 旧格式: userid → {name, aliases}
                 userid = key
                 aliases = value.get("aliases", [])
                 for alias in aliases:
@@ -94,11 +130,11 @@ class WechatAppChannel(BaseChannel):
         cls, module_config: Dict, global_config: Dict, result: Dict = None
     ) -> str:
         """
-        仅根据门店名列表查全局映射表，返回门店负责人 userid
+        仅根据门店名列表查映射表，返回门店负责人 userid
         用于同步推送场景：模块接收人 + 门店负责人 分别推送
+        优先从 stores.yaml 读取，回退到 general.yaml 的 wechat_app_targets
         """
-        targets_map = global_config.get("wechat_app_targets", {})
-        if not targets_map or not result:
+        if not result:
             return ""
 
         data = result.get("data") or {}
@@ -107,7 +143,17 @@ class WechatAppChannel(BaseChannel):
         if not store_names:
             return ""
 
-        alias_index = cls._build_alias_index(targets_map)
+        # 优先从 stores.yaml 读取
+        alias_index = cls._build_alias_index_from_stores()
+        if not alias_index:
+            # 回退到 general.yaml 的 wechat_app_targets
+            targets_map = global_config.get("wechat_app_targets", {})
+            if targets_map:
+                alias_index = cls._build_alias_index(targets_map)
+
+        if not alias_index:
+            return ""
+
         userids = []
         seen = set()
         for name in store_names:

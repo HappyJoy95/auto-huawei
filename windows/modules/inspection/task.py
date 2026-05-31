@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 import sys
+import yaml
 
 # 添加当前目录到路径，以便导入本地 scraper
 sys.path.insert(0, str(Path(__file__).parent))
@@ -18,6 +19,25 @@ class InspectionTask(BaseTask):
 
     task_id = "inspection"
     task_name = "门店点检"
+
+    def _get_stores_from_global(self) -> list:
+        """从全局 stores.yaml 读取门店列表"""
+        stores_file = DATA_DIR.parent / "config" / "stores.yaml"
+        if stores_file.exists():
+            with open(stores_file, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+                stores = data.get("stores", [])
+                # 转换为巡检模块需要的格式
+                return [
+                    {
+                        "name": s.get("name", ""),
+                        "code": s.get("code", ""),
+                        "short_name": s.get("short_name", "")
+                    }
+                    for s in stores
+                    if s.get("name") and s.get("code")
+                ]
+        return []
 
     def run(self) -> TaskResult:
         self.status = TaskStatus.RUNNING
@@ -43,8 +63,15 @@ class InspectionTask(BaseTask):
 
             self.update_progress(10, "连接模拟器...")
 
-            # 从模块配置读取门店列表，从全局配置读取 ADB 端口
+            # 从模块配置读取门店列表，为空则从全局配置读取
             stores = self.config.get('stores', [])
+            if not stores:
+                stores = self._get_stores_from_global()
+                if stores:
+                    self.log("INFO", "从全局门店配置读取门店列表")
+                else:
+                    self.log("INFO", "全局门店配置也为空")
+
             dry_run = self.dry_run
             adb_port = Config.get_adb_port()
             self.log("INFO", f"ADB端口: {adb_port}")

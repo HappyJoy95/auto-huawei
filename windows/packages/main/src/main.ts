@@ -117,6 +117,19 @@ function setupIpc() {
     const response = await axios.get(`${API_BASE}/modules/${moduleName}/style`)
     return response.data
   })
+
+  // 门店管理
+  ipcMain.handle('stores:get', async () => {
+    const axios = require('axios')
+    const response = await axios.get(`${API_BASE}/stores`)
+    return response.data
+  })
+
+  ipcMain.handle('stores:save', async (_, stores: any) => {
+    const axios = require('axios')
+    const response = await axios.post(`${API_BASE}/stores`, stores)
+    return response.data
+  })
 }
 
 app.whenReady().then(async () => {

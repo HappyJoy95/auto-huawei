@@ -29,7 +29,18 @@
               <a-table-column title="门店名称" data-index="name" :width="180" />
               <a-table-column title="简称" data-index="short_name" :width="100" />
               <a-table-column title="编码" data-index="code" :width="100" />
-              <a-table-column title="抖音链接" data-index="douyin_url" :width="300" ellipsis />
+              <a-table-column title="企微接收人" data-index="wechat_userids" :width="150">
+                <template #cell="{ record }">
+                  <span v-if="record.wechat_userids?.length">{{ record.wechat_userids.join(', ') }}</span>
+                  <span v-else class="text-gray">-</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="别称" data-index="aliases" :width="150">
+                <template #cell="{ record }">
+                  <span v-if="record.aliases?.length">{{ record.aliases.join(', ') }}</span>
+                  <span v-else class="text-gray">-</span>
+                </template>
+              </a-table-column>
               <a-table-column title="操作" :width="120" fixed="right">
                 <template #cell="{ record, rowIndex }">
                   <a-space>
@@ -95,19 +106,28 @@
     </a-tabs>
 
     <!-- 添加/编辑门店弹窗 -->
-    <a-modal v-model:visible="storeModalVisible" :title="editingIndex >= 0 ? '编辑门店' : '添加门店'" @ok="saveStore" @cancel="closeStoreModal">
+    <a-modal v-model:visible="storeModalVisible" :title="editingIndex >= 0 ? '编辑门店' : '添加门店'" @ok="saveStore" @cancel="closeStoreModal" :width="500">
       <a-form :model="editingStore" layout="vertical">
         <a-form-item label="门店名称" required>
-          <a-input v-model="editingStore.name" placeholder="胶南合美MALL店" />
+          <a-input v-model="editingStore.name" placeholder="杭州萧山机场华为授权体验店" />
         </a-form-item>
         <a-form-item label="简称">
-          <a-input v-model="editingStore.short_name" placeholder="胶南合美" />
+          <a-input v-model="editingStore.short_name" placeholder="萧山机场店" />
         </a-form-item>
-        <a-form-item label="编码">
-          <a-input v-model="editingStore.code" placeholder="SCN075029" />
+        <a-form-item label="门店代码">
+          <a-input v-model="editingStore.code" placeholder="SCN123456" />
         </a-form-item>
-        <a-form-item label="抖音主页链接">
-          <a-input v-model="editingStore.douyin_url" placeholder="https://www.douyin.com/user/..." />
+        <a-form-item label="企微接收人">
+          <a-input-tag v-model="editingStore.wechat_userids" placeholder="输入 userid 后回车添加" />
+          <template #extra>
+            <span class="text-hint">企微应用推送时的接收人 userid</span>
+          </template>
+        </a-form-item>
+        <a-form-item label="别称">
+          <a-input-tag v-model="editingStore.aliases" placeholder="输入别称后回车添加" />
+          <template #extra>
+            <span class="text-hint">用于匹配订单中的门店名</span>
+          </template>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -129,7 +149,8 @@ const editingStore = reactive({
   name: '',
   short_name: '',
   code: '',
-  douyin_url: ''
+  wechat_userids: [] as string[],
+  aliases: [] as string[]
 })
 
 // 京东配置
@@ -150,14 +171,14 @@ onMounted(async () => {
 
 async function loadAllConfig() {
   try {
-    const config = await window.api.config.get()
-
     // 加载门店
-    if (config.stores?.stores) {
-      stores.value = config.stores.stores
+    const storesData = await window.api.stores.get()
+    if (storesData.stores) {
+      stores.value = storesData.stores
     }
 
     // 加载京东配置
+    const config = await window.api.config.get()
     if (config.tasks?.jddj_orders) {
       Object.assign(jddjConfig, config.tasks.jddj_orders)
     }
@@ -174,7 +195,7 @@ async function loadAllConfig() {
 // 门店管理
 function showAddStore() {
   editingIndex.value = -1
-  Object.assign(editingStore, { name: '', short_name: '', code: '', douyin_url: '' })
+  Object.assign(editingStore, { name: '', short_name: '', code: '', wechat_userids: [], aliases: [] })
   storeModalVisible.value = true
 }
 
@@ -206,7 +227,7 @@ function deleteStore(index: number) {
 async function saveStores() {
   saving.value = true
   try {
-    await window.api.config.set('stores', { mumu: { adb_port: emulatorConfig.adb_port }, stores: stores.value })
+    await window.api.stores.save({ stores: stores.value })
     Message.success('保存成功')
   } catch (e) {
     Message.error('保存失败')
